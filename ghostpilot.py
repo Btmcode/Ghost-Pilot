@@ -2542,11 +2542,9 @@ th{color:var(--soluk);font-weight:600;font-size:12px}
      <span id="aiDurum" style="margin-left:auto;font-size:11.5px;font-weight:700;
        padding:4px 11px;border-radius:99px;background:#1e2d4a;color:#c9d5e8;
        pointer-events:none">KONTROL EDİLİYOR…</span></h1>
-<p class="alt">Yerel panel — yalnız bu bilgisayardan erişilir</p>
+<p class="alt">{KAPSAM_YAZI}</p>
 
-<div class="uyari">Bu panel yalnız <b>127.0.0.1</b> üzerinde açılır. Telefonunuzdan veya
-başka bir cihazdan erişilemez. uzaktan erişimi tamamen kesmek için aşağıdaki
-<b>DURDUR</b> düğmesini kullanın.</div>
+<div class="uyari">{KAPSAM_UYARI}</div>
 
 <div class="izgara">
   <div class="kart"><div class="b">Sunucu</div><div class="d" id="durum">—</div></div>
@@ -2724,6 +2722,27 @@ async function eylem(k, btn){
 }
 yukle(); setInterval(yukle, 4000);
 </script></body></html>"""
+
+
+def _panel_kapsam_metni():
+    """Panelin başlık/uyarı metnini bağlandığı arayüze göre üret.
+
+    Yalnız 127.0.0.1 → 'bu bilgisayardan erişilir'
+    0.0.0.0 / ::     → 'ağdan erişilebilir' + erişim anahtarı uyarısı
+    """
+    disari = RELAY_HOST in ("0.0.0.0", "::", "")
+    if disari:
+        alt = "Panel — erişim anahtarıyla korunur"
+        uyari = ("Bu panel tüm ağ arayüzlerine açık. Adresi bilen herkes bağlanabilir; "
+                 "her istek <b>erişim anahtarı</b> ile doğrulanır. Kesmek için "
+                 "aşağıdaki <b>UZAKTAN ERİŞİMİ DURDUR</b> düğmesini kullanın.")
+    else:
+        alt = "Yerel panel — yalnız bu bilgisayardan erişilir"
+        uyari = ("Bu panel yalnız <b>127.0.0.1</b> üzerinde açılır. Telefonunuzdan veya "
+                 "başka bir cihazdan erişilemez. Uzaktan erişimi tamamen kesmek için "
+                 "aşağıdaki <b>DURDUR</b> düğmesini kullanın.")
+    return (PANEL_HTML.replace("{KAPSAM_YAZI}", alt)
+                      .replace("{KAPSAM_UYARI}", uyari))
 
 
 def _audit_tail(n=25):
@@ -3154,7 +3173,7 @@ img{{border-radius:10px}}
                 ]})
 
         if path in ("/panel", "/panel/"):
-            body = PANEL_HTML.encode("utf-8")
+            body = _panel_kapsam_metni().encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
@@ -3477,6 +3496,8 @@ def _start_scheduler():
 
 
 def run_relay(port=None, host="127.0.0.1"):
+    global RELAY_HOST
+    RELAY_HOST = host
     port = int(port or CFG.get("port") or DEFAULT_PORT)
     # elle başlatıldıysa "durduruldu" bayrağı anlamsız
     try:
@@ -3494,12 +3515,16 @@ def run_relay(port=None, host="127.0.0.1"):
     else:
         print("  İşlem imleci  : kapalı (tkinter/ekran yok veya config show_agent=false)")
     c = caps()
+    _goster_host = "127.0.0.1" if host in ("0.0.0.0", "", "::") else host
+    _host_notu = ("  (tüm arayüzler — dışarıdan erişim AÇIK, erişim anahtarı zorunlu)"
+                  if host in ("0.0.0.0", "::") else "  (yalnız bu bilgisayar)")
     print(f"""
   👻 GhostPilot v{VERSION} — uzak köprü açık
   ─────────────────────────────────────────────────────────
-  Yerel sağlık   : http://127.0.0.1:{port}/health
-  Yerel panel    : http://127.0.0.1:{port}/panel   ← durum + DURDUR + onay
-  MCP ucu        : http://127.0.0.1:{port}/mcp
+  Yerel sağlık   : http://{_goster_host}:{port}/health
+  Yerel panel    : http://{_goster_host}:{port}/panel   ← durum + DURDUR + onay
+  MCP ucu        : http://{_goster_host}:{port}/mcp
+  Bağlandığı yer : {host}:{port}{_host_notu}
   Araç sayısı    : {len(TOOLS)}
   Kimlik doğr.   : OAuth 2.1 + Bearer (izin ekranı) · {"ZORUNLU" if CFG.get("require_token") else "KAPALI (!)"}
 
@@ -3800,12 +3825,18 @@ def main():
         return run_watchdog(port)
     if cmd == "relay":
         port = None
+        host = "127.0.0.1"
         if "--port" in sys.argv:
             try:
                 port = int(sys.argv[sys.argv.index("--port") + 1])
             except Exception:
                 pass
-        run_relay(port)
+        if "--host" in sys.argv:
+            try:
+                host = sys.argv[sys.argv.index("--host") + 1]
+            except Exception:
+                pass
+        run_relay(port, host)
         return 0
     if cmd == "tools":
         print(f"\n  {len(TOOLS)} araç:\n")
