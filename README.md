@@ -5,7 +5,7 @@
 GhostPilot connects ChatGPT, Claude, Cursor and any MCP-compatible assistant to **your own machine** — so the assistant can read your files, run your commands and see the result. No cloud, no upload, no sandbox.
 
 <!-- LANGUAGE SWITCHER -->
-**[English](#-english)** · **[Türkçe](#-türkçe)** · **[Deutsch](#-deutsch)** · **[Español](#-español)** · **[中文](#-中文)**
+**[English](#-english)** · **[Türkçe](#-türkçe)** · **[Deutsch](#-deutsch)** · **[Español](#-español)** · **[中文](#-中文)** · **[日本語](#-日本語)**
 
 ---
 
@@ -844,6 +844,122 @@ python kur.py dur            # 紧急停止
 ## 许可证
 
 MIT — 见 [LICENSE](LICENSE)。
+
+---
+
+# 🇯🇵 日本語
+
+## GhostPilot とは
+
+GhostPilot はローカルで動作する **MCP サーバー**です。お使いのパソコン上で動き、チャットアシスタントに **44 の実際のツール**を提供します — ファイル、ターミナル、画面、マウス、キーボード。画面上にはゴーストカーソルが表示され、何が起きているかを目で確認できます。
+
+**データはパソコンの外に出ません。** アシスタントは `localhost` に直接接続します。第三者のクラウドも、テレメトリーも、アカウントもありません。
+
+## 主な機能
+
+- **44 のツール** — ファイルの読み書き・編集、glob、grep、ターミナル、プロセス、スクリーンショット、クリック、ドラッグ、入力、ショートカット、クリップボード、ウィンドウ、文書（docx/xlsx/pptx/pdf）、スケジュールタスク
+- **見えるエージェント** — ゴーストカーソルが作業位置を示します。あなた自身のマウスは動きません
+- **承認画面** — 危険な操作（削除・ターミナル）はクリック承認が必要
+- **読み取り専用モード** — スイッチひとつで何も変更できません
+- **並行作業** — あなたが作業している間もアシスタントが入力できます
+- **4 言語対応** — トルコ語・英語・ドイツ語・スペイン語
+- **依存関係ゼロ** — Python 標準ライブラリのみ
+- **ワンクリックでアンインストール**
+
+## クイックスタート（5 分）
+
+### 1. Python をインストール（既にある場合はスキップ）
+
+[python.org/downloads](https://www.python.org/downloads/) から **3.9 以上**を入手。
+Windows では **「Add python.exe to PATH」** に必ずチェックを入れてください。
+
+### 2. インストーラーを実行
+
+| プラットフォーム | 操作 |
+|---|---|
+| **Windows** | 解凍 → **`KURULUM.bat`** をダブルクリック |
+| **macOS** | 解凍 → `kurulum_macos.command` をダブルクリック |
+| **Linux** | 解凍 → `./kurulum.sh` |
+
+インストール先を尋ねられ、専用環境の作成、デスクトップショートカットの追加、アプリ一覧への登録まで約 30 秒で完了します。
+
+### 3. GhostPilot を起動
+
+デスクトップの 👻 ショートカットをダブルクリック、または:
+
+```bash
+python kur.py basla
+```
+
+### 4. アシスタントを接続
+
+#### ChatGPT（カスタムコネクタ）
+
+1. **ChatGPT** → **設定** → **コネクタ** → **詳細設定** → **開発者モード**をオン
+2. **作成** / **カスタムコネクタを追加**
+3. 入力:
+   - **名前:** `GhostPilot`
+   - **URL:** パネルに表示されるアドレス（例 `http://127.0.0.1:17381/mcp`）
+   - **認証:** `認証なし`（ローカル）または `API キー` → パネルのアクセスキーを貼り付け
+4. 保存して新しいチャットを開き、尋ねてください: *「このパソコンで何ができる？」*
+
+> **ブラウザ版 ChatGPT の場合:** ウェブページ上の `127.0.0.1` は OpenAI のサーバーを指します。Tailscale トンネル（`python kur.py tunel`）の HTTPS アドレスを使用してください。
+
+#### Claude Desktop
+
+```json
+{
+  "mcpServers": {
+    "ghostpilot": {
+      "command": "python",
+      "args": ["C:\\GhostPilot\\ghostpilot.py", "bridge"]
+    }
+  }
+}
+```
+
+設定ファイル: `%APPDATA%\Claude\claude_desktop_config.json`（Windows）または
+`~/Library/Application Support/Claude/claude_desktop_config.json`（macOS）。変更後は Claude Desktop を再起動してください。
+
+## 使い方
+
+```bash
+python kur.py basla          # 起動 + パネルを開く
+python kur.py durum          # 動作確認
+python kur.py doktor         # インストール診断
+python kur.py kota           # 今月の使用量
+python kur.py dur            # 緊急停止
+```
+
+## 無料プランとサポートキー
+
+| プラン | 範囲 | 価格 |
+|---|---|---|
+| **無料** | **月 20,000 回のツール呼び出し** | 0 |
+| **サポートキー** | 無制限 | **月 10 ドル** / **年 96 ドル** |
+
+| 状況 | カウント |
+|---|---|
+| 成功した呼び出し | ✅ |
+| エラーを返したコマンド | ✅ |
+| **タイムアウトした呼び出し** | ❌（返還） |
+| 接続切断 | ❌ |
+| ステータス問い合わせ | ❌ |
+
+カウンターは**毎月 1 日 00:00 UTC** にリセットされます。**80%** に達するとパネルとチャットに警告が表示されます。
+
+## セキュリティ
+
+- **既定では何も公開されません。** アクセスキーなしではリクエストは通りません。
+- **ローカルのみ** — トンネルを自分で開かない限り外部から到達できません。
+- **承認画面**（削除・ターミナル）、**読み取り専用モード**、**監査ログ**（`~/.ghostpilot/audit.log`）。
+- **緊急停止:** `python kur.py dur`。
+
+> **正直な注記:** ソースコードは公開され、お使いのパソコン上で動きます。コードを書き換えれば制限は取り除けます。上記の仕組みはそれを面倒にしますが、不可能にはしません。
+
+## ライセンス
+
+MIT — [LICENSE](LICENSE) を参照。
 
 ---
 
