@@ -6,7 +6,7 @@ import hashlib, io, os, re, shutil, subprocess, sys, zipfile
 BURASI = os.path.dirname(os.path.abspath(__file__))
 DOSYALAR = ["ghostpilot.py","screen.py","kur.py","setup.py","exe_yap.py","kurulum_gui.py","kurulum.py","lisans.py","paketler.py","kisayol.py","ui.py","kurulum_ui.py","diller.py","sanalortam.py","kaldir.py","lisans_online.py","ikon.py","tepsi.py","input_bg.py",
             "belge.py","guncelle.py","goverlay.py","simge_uret.py","README.md",
-            "GIZLILIK.md","KOSULLAR.md",
+            "GIZLILIK.md","KOSULLAR.md","SECURITY.md",
             # Windows girişleri
             "BASLA.bat","KURULUM.bat","PANEL.bat","KALDIR.bat","_bitis.bat",
             # Linux / macOS girişleri
