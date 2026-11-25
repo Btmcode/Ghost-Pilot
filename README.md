@@ -53,17 +53,11 @@ GhostPilot is a local **MCP (Model Context Protocol) server**. It runs on your c
 
 ## Quick start (5 minutes)
 
-### 1. Install Python (skip if already installed)
+### 1. Python — installed for you (Windows)
 
-Download from [python.org/downloads](https://www.python.org/downloads/) — version **3.9 or newer**.
-On Windows, tick **"Add python.exe to PATH"** during setup.
+**On Windows you do not need to install Python.** `KURULUM.bat` checks for Python 3.9+ and, if it is missing, downloads the official installer from python.org and installs it automatically (per-user, no admin rights). This can take 5–10 minutes on the first run.
 
-Verify:
-
-```bash
-python --version      # Windows
-python3 --version     # macOS / Linux
-```
+**macOS / Linux:** install Python 3.9+ first — `brew install python3` or `sudo apt install -y python3 python3-venv python3-pip`.
 
 ### 2. Run the installer
 
@@ -273,17 +267,11 @@ GhostPilot, bilgisayarınızda çalışan yerel bir **MCP sunucusudur**. ChatGPT
 
 ## Hızlı başlangıç (5 dakika)
 
-### 1. Python kurun (kuruluysa atlayın)
+### 1. Python — kendisi kuruyor (Windows)
 
-[python.org/downloads](https://www.python.org/downloads/) — sürüm **3.9 veya üstü**.
-Windows'ta kurulum sırasında **"Add python.exe to PATH"** kutusunu işaretleyin.
+**Windows'ta Python kurmanız gerekmez.** `KURULUM.bat` önce Python 3.9+ var mı diye bakar; yoksa python.org'un resmi kurulum dosyasını indirip kendisi kurar (yalnız sizin kullanıcınız için, yönetici izni gerekmez). İlk seferde 5–10 dakika sürebilir.
 
-Kontrol:
-
-```bash
-python --version      # Windows
-python3 --version     # macOS / Linux
-```
+**macOS / Linux:** önce Python 3.9+ kurun — `brew install python3` veya `sudo apt install -y python3 python3-venv python3-pip`.
 
 ### 2. Kurulumu çalıştırın
 
@@ -493,10 +481,11 @@ GhostPilot ist ein lokaler **MCP-Server**. Er läuft auf Ihrem Computer und gibt
 
 ## Schnellstart (5 Minuten)
 
-### 1. Python installieren (überspringen, falls vorhanden)
+### 1. Python — wird mitinstalliert (Windows)
 
-Von [python.org/downloads](https://www.python.org/downloads/) — Version **3.9 oder neuer**.
-Unter Windows beim Setup **„Add python.exe to PATH"** ankreuzen.
+**Unter Windows müssen Sie Python nicht selbst installieren.** `KURULUM.bat` prüft auf Python 3.9+ und lädt bei Bedarf das offizielle Installationsprogramm von python.org herunter (nur für Ihren Benutzer, keine Administratorrechte nötig). Beim ersten Mal 5–10 Minuten.
+
+**macOS / Linux:** Python 3.9+ vorher installieren — `brew install python3` bzw. `sudo apt install -y python3 python3-venv python3-pip`.
 
 ### 2. Installer starten
 
@@ -628,10 +617,11 @@ GhostPilot es un **servidor MCP local**. Se ejecuta en tu ordenador y da a tu as
 
 ## Inicio rápido (5 minutos)
 
-### 1. Instala Python (omítelo si ya lo tienes)
+### 1. Python — se instala solo (Windows)
 
-Desde [python.org/downloads](https://www.python.org/downloads/) — versión **3.9 o superior**.
-En Windows marca **«Add python.exe to PATH»**.
+**En Windows no necesitas instalar Python.** `KURULUM.bat` comprueba si hay Python 3.9+ y, si falta, descarga el instalador oficial de python.org y lo instala automáticamente (solo para tu usuario, sin permisos de administrador). La primera vez tarda 5–10 minutos.
+
+**macOS / Linux:** instala Python 3.9+ antes — `brew install python3` o `sudo apt install -y python3 python3-venv python3-pip`.
 
 ### 2. Ejecuta el instalador
 
@@ -750,10 +740,11 @@ GhostPilot 是一个本地 **MCP 服务器**。它运行在你的电脑上，为
 
 ## 快速开始
 
-### 1. 安装 Python（已安装可跳过）
+### 1. Python —— 自动安装（Windows）
 
-从 [python.org/downloads](https://www.python.org/downloads/) 下载 **3.9 或更高版本**。
-Windows 安装时请勾选 **「Add python.exe to PATH」**。
+**Windows 上你不需要自己安装 Python。** `KURULUM.bat` 会先检查是否已有 Python 3.9+，没有就从 python.org 下载官方安装程序并自动安装（仅当前用户，无需管理员权限）。首次可能需要 5–10 分钟。
+
+**macOS / Linux:** 请先安装 Python 3.9+ —— `brew install python3` 或 `sudo apt install -y python3 python3-venv python3-pip`。
 
 ### 2. 运行安装程序
 
@@ -868,10 +859,11 @@ GhostPilot はローカルで動作する **MCP サーバー**です。お使い
 
 ## クイックスタート（5 分）
 
-### 1. Python をインストール（既にある場合はスキップ）
+### 1. Python — 自動でインストール（Windows）
 
-[python.org/downloads](https://www.python.org/downloads/) から **3.9 以上**を入手。
-Windows では **「Add python.exe to PATH」** に必ずチェックを入れてください。
+**Windows では Python を自分で入れる必要はありません。** `KURULUM.bat` が Python 3.9 以上を確認し、無ければ python.org の公式インストーラーをダウンロードして自動で導入します（現在のユーザーのみ、管理者権限不要）。初回は 5〜10 分かかることがあります。
+
+**macOS / Linux:** 先に Python 3.9 以上をインストールしてください — `brew install python3` または `sudo apt install -y python3 python3-venv python3-pip`。
 
 ### 2. インストーラーを実行
 
