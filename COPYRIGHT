@@ -1,0 +1,21 @@
+GhostPilot — bilgisayarınızı yapay zekâya bağlar
+================================================
+
+Copyright (c) 2026 BTM Code
+Tüm hakları saklıdır / All rights reserved.
+
+Bu yazılım MIT Lisansı ile dağıtılır. Ayrıntı için LICENSE dosyasına bakın.
+This software is distributed under the MIT License. See the LICENSE file.
+
+Üçüncü taraf bileşenler / Third-party components:
+  - Python (PSF License 2.0)              https://python.org
+  - Pillow  (MIT-CMU License)             https://python-pillow.org
+  - pystray (LGPL v3)                     https://github.com/moses-palmer/pystray
+  - PyNaCl  (Apache 2.0)                  https://pynacl.readthedocs.io
+  - Tailscale (BSD 3-Clause)              https://tailscale.com
+
+Ghost illüstrasyonu ve simgeler: BTM Code tarafından üretildi (MIT).
+"GhostPilot" adı ve logosu BTM Code'a aittir.
+
+İletişim / Contact: https://github.com/Btmcode/GhostPilot
+Bağış / Donate    : https://buymeacoffee.com/btmcode

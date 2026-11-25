@@ -1,0 +1,8 @@
+# Windows batch files must keep CRLF to run correctly
+*.bat text eol=crlf
+*.command text eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.ico binary
+*.png binary

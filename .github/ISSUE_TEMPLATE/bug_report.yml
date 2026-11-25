@@ -1,0 +1,49 @@
+name: Bug report
+description: Something does not work as described
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please do **not** include your access key, support key or personal file paths.
+  - type: input
+    id: version
+    attributes:
+      label: GhostPilot version
+      description: Output of `python kur.py durum`
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Windows 10, Windows 11, macOS, Linux]
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: Which assistant?
+      placeholder: ChatGPT desktop / ChatGPT web / Claude Desktop / Cursor / other
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected / actual behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Diagnostics
+      description: Paste the output of `python kur.py doktor` (remove any keys first)
+      render: shell
