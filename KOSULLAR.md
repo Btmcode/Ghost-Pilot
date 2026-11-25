@@ -15,10 +15,10 @@ Tam metin: depodaki `LICENSE` dosyası.
 
 ## 3. Sorumluluk reddi — ÖNEMLİ
 
-GhostPilot, yapay zekâya **bilgisayarınızda işlem yapma yetkisi** verir. Bu güçlü
+GhostPilot, sohbet programına **bilgisayarınızda işlem yapma yetkisi** verir. Bu güçlü
 bir yetkidir ve **riskleri vardır**:
 
-* Yapay zekâ hatalı komut çalıştırabilir, dosya silebilir veya değiştirebilir.
+* sohbet programı hatalı komut çalıştırabilir, dosya silebilir veya değiştirebilir.
 * Bu yazılım **"olduğu gibi" (AS IS)** sunulur; **hiçbir garanti verilmez**.
 * Veri kaybı, iş kaybı veya herhangi bir zarardan **BTM Code sorumlu tutulamaz**.
 * Kritik verilerinizi düzenli olarak **yedekleyin**.
