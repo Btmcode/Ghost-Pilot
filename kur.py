@@ -763,7 +763,13 @@ def start_relay():
     head("Sunucuyu başlat")
     say("  Bu pencere AÇIK KALMALI. Kapatırsanız ChatGPT bağlantısı kesilir.")
     say("  Durdurmak için: Ctrl+C\n")
-    return subprocess.call([PY, SERVER, "relay"])
+    ek = []
+    if "--host" in sys.argv:
+        try:
+            ek = ["--host", sys.argv[sys.argv.index("--host") + 1]]
+        except Exception:
+            ek = []
+    return subprocess.call([PY, SERVER, "relay"] + ek)
 
 
 def run_test():
