@@ -76,6 +76,26 @@ def _simge_yukle():
     return _gomulu_simge()
 
 
+
+def _tepsi_var():
+    """Bu oturumda sistem tepsisi (system tray) var mı?
+
+    Yoksa pystray anlamsız hatalar basar (Failed to dock icon / AssertionError).
+    Windows'ta her zaman vardır; Linux'ta X11 tepsi yöneticisi gerekir.
+    """
+    if os.name == "nt":
+        return True
+    try:
+        import subprocess
+        # X11 tepsi yöneticisi: bir pencere sahibi var mı? (_NET_SYSTEM_TRAY_S0)
+        r = subprocess.run(["xprop", "-root", "_NET_SYSTEM_TRAY_S0"],
+                           capture_output=True, text=True, timeout=3)
+        if r.returncode == 0 and "window id" in (r.stdout or ""):
+            return True
+    except Exception:
+        pass
+    return False
+
 class Tepsi:
     """Saat kenarındaki simge.
 
@@ -131,6 +151,8 @@ class Tepsi:
         """Simgeyi gösterir. True → başarılı."""
         if not PST:
             return False
+        if not _tepsi_var():
+            return False          # masaüstü tepsi çubuğu yok → sessizce geç
         try:
             im = _simge_yukle()
             if im is None:

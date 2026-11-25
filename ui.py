@@ -38,6 +38,12 @@ try:
 except Exception:
     diller = None
 
+try:
+    import hata
+    hata.kur("ui", sesli=True)
+except Exception:
+    hata = None
+
     def t(k, **kw):
         return k
 
@@ -743,16 +749,75 @@ TURUNCU = AMBER
 
 
 def main():
+    # Hata olsa bile pencere KAPANMASIN: sebep ekranda ve hata.log'da görünür.
     if not TK:
+        if hata:
+            hata.yaz("ui", "tkinter yok — tarayıcı paneli açılıyor")
         return subprocess.call([sys.executable, os.path.join(BURASI, "kur.py"), "panel"])
-    kok = tk.Tk()
+    try:
+        kok = tk.Tk()
+    except Exception as e:
+        if hata:
+            hata.yaz_hata(type(e), e, e.__traceback__, "PENCERE AÇILAMADI")
+        _hata_penceresi("Pencere açılamadı", e)
+        return 1
     try:
         kok.tk.call("tk", "scaling", 1.15)
     except Exception:
         pass
-    Panel(kok, tepsiye_gizle=("--tepsi" in sys.argv))
-    kok.mainloop()
+    try:
+        Panel(kok, tepsiye_gizle=("--tepsi" in sys.argv))
+    except Exception as e:
+        if hata:
+            hata.yaz_hata(type(e), e, e.__traceback__, "PANEL OLUŞTURULAMADI")
+        try:
+            kok.destroy()
+        except Exception:
+            pass
+        _hata_penceresi("Arayüz oluşturulamadı", e)
+        return 1
+    try:
+        kok.mainloop()
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        if hata:
+            hata.yaz_hata(type(e), e, e.__traceback__, "ARAYÜZ DÖNGÜSÜ ÇÖKTÜ")
+        _hata_penceresi("Arayüz beklenmedik şekilde durdu", e)
+        return 1
     return 0
+
+
+def _hata_penceresi(baslik, exc):
+    """Kullanıcıya gösterilecek hata penceresi — pencere anında kapanmasın."""
+    yol = hata.yol() if hata else "(günlük yok)"
+    try:
+        from tkinter import messagebox, scrolledtext
+        p = tk.Tk()
+        p.title("GhostPilot — hata")
+        p.configure(bg="#0e1628")
+        p.geometry("720x420")
+        tk.Label(p, text=baslik, bg="#0e1628", fg="#f87171",
+                 font=("Segoe UI", 13, "bold")).pack(anchor="w", padx=18, pady=(16, 4))
+        tk.Label(p, text=f"{type(exc).__name__}: {exc}", bg="#0e1628", fg="#e2e8f0",
+                 wraplength=680, justify="left", anchor="w",
+                 font=("Segoe UI", 9)).pack(anchor="w", padx=18, pady=(0, 10))
+        tk.Label(p, text=f"Ayrıntılar: {yol}", bg="#0e1628", fg="#94a3b8",
+                 font=("Segoe UI", 8)).pack(anchor="w", padx=18)
+        kutu = scrolledtext.ScrolledText(p, height=12, bg="#080d1a", fg="#cbd5e1",
+                                         insertbackground="#cbd5e1",
+                                         font=("Consolas", 8), relief="flat")
+        kutu.pack(fill="both", expand=True, padx=18, pady=10)
+        try:
+            kutu.insert("end", hata.son(40) if hata else str(exc))
+        except Exception:
+            kutu.insert("end", str(exc))
+        kutu.configure(state="disabled")
+        tk.Button(p, text="Kapat", command=p.destroy, bg="#1e293b", fg="#e2e8f0",
+                  relief="flat", padx=22, pady=6).pack(pady=(0, 14))
+        p.mainloop()
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

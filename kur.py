@@ -1209,7 +1209,7 @@ def doktor():
         if d.get("token"):
             iyi("Erişim anahtarı tanımlı")
         else:
-            kotu("Erişim anahtarı yok", "basla komutu ilk çalıştırmada üretir")
+            bilgi("Erişim anahtarı henüz oluşmadı — ilk başlatmada kendiliğinden üretilir")
     except Exception as e:
         bilgi(f"Erişim anahtarı okunamadı: {e}")
 
@@ -2164,6 +2164,42 @@ def menu():
             return 0
 
 
+
+def hata_goster():
+    """Son hatayı göster — 'pencere açılıp kapandı' durumunda ne olduğunu söyler."""
+    head("Hata günlüğü")
+    try:
+        import hata as H
+    except Exception:
+        say("  ⚠️  hata.py bulunamadı.", "warn")
+        return 1
+    say(f"  Dosya: {H.yol()}", "dim")
+    if not H.var_mi():
+        say("\n  ✅ Kayıtlı hata yok — program hatasız çalışmış.", "ok")
+        return 0
+    say("")
+    print(H.son(80))
+    say("")
+    say("  " + "─" * 54)
+    say("  Bu metnin TAMAMINI geliştiriciye gönderin.", "warn")
+    say("  Silmek için: python kur.py hata-temizle")
+    return 0
+
+
+def hata_temizle():
+    head("Hata günlüğü temizle")
+    try:
+        import hata as H
+        if H.temizle():
+            say("  ✅ Hata günlüğü silindi.", "ok")
+            return 0
+        say("  ℹ️  Silinecek kayıt yok.", "dim")
+        return 0
+    except Exception as e:
+        say(f"  ⚠️  {e}", "warn")
+        return 1
+
+
 def main():
     cmd = (sys.argv[1] if len(sys.argv) > 1 else "").lower()
     if not os.path.exists(SERVER):
@@ -2325,6 +2361,10 @@ def main():
         return run_test()
     if cmd in ("doktor", "doctor", "denetle", "check", "diagnose"):
         return doktor()
+    if cmd in ("hata", "log", "hata-log", "error", "errors", "crash"):
+        return hata_goster()
+    if cmd in ("hata-temizle", "log-temizle", "hata-sil"):
+        return hata_temizle()
     if cmd in ("tunel", "tunnel", "uzaktan-erisim", "funnel"):
         return tunel(True)
     if cmd in ("tunel-kapat", "tunnel-off", "funnel-kapat"):
@@ -2337,7 +2377,7 @@ def main():
         return uninstall_clients()
     say(f"  Bilinmeyen komut: {cmd}", "err")
     say("  Geçerli: basla | dur | durum | doktor | panel | kota | lisans | paketler\n"
-        "           tunel | tunel-kapat | test | izin <yol> | otomatik | kaldir | guncelle")
+        "           tunel | tunel-kapat | hata | test | izin <yol> | otomatik | kaldir")
     return 1
 
 

@@ -88,8 +88,8 @@ def _pythonw():
 #  WINDOWS — .lnk (PowerShell / WScript.Shell)
 # ===========================================================================
 def _win_kisayol(hedef_yol, aciklama="GhostPilot — menü ve panel"):
-    if not os.path.exists(IKON_ICO):
-        return False
+    # ikon yoksa kısayol yine oluşturulsun (ikon sadece görsel)
+
     ps = (
         "$ErrorActionPreference='Stop';"
         "$s=(New-Object -ComObject WScript.Shell);"
@@ -97,7 +97,7 @@ def _win_kisayol(hedef_yol, aciklama="GhostPilot — menü ve panel"):
         f"$l.TargetPath='{_pythonw()}';"
         f"$l.Arguments='\"{UI}\"';"
         f"$l.WorkingDirectory='{BURASI}';"
-        f"$l.IconLocation='{IKON_ICO},0';"
+        + (f"$l.IconLocation='{IKON_ICO},0';" if os.path.exists(IKON_ICO) else "") +
         f"$l.Description='{aciklama}';"
         "$l.WindowStyle=1;"
         "$l.Save();"

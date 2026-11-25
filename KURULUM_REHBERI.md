@@ -225,6 +225,72 @@ Sonra klasörde `./kurulum.sh` komutunu çalıştırın.
 
 ---
 
+---
+
+## 🆘 Bir şey ters giderse — hata kaydı nasıl alınır
+
+Program açılıp hemen kapanıyorsa bile **sebebi kaydedilir**. Hiçbir şey kaybolmaz.
+
+### 1. Kısayola çift tıklayın
+
+- **Hata varsa** pencere kapanmaz; hata sebebi hem **ekranda** hem şu dosyada olur:
+  `C:\Users\<adınız>\.ghostpilot\hata.log`
+- Ekrandaki yazıyı okuyabilirsiniz: hangi dosya, hangi satır, ne hata.
+
+### 2. `BASLA.bat` ile açın
+
+Masaüstündeki klasörde **`BASLA.bat`** dosyasına çift tıklayın. Siyah pencerede hata sebebi **açıkça yazar** ve pencere kapanmaz.
+
+### 3. Tek komutla hatayı görün
+
+**Başlat** → `cmd` → kurulum klasörüne gidin, sonra:
+
+```
+python kur.py hata
+```
+
+Örnek çıktı:
+
+```
+[2026-11-25 18:49:22] PANEL OLUŞTURULAMADI
+sürüm   : 5.16.0
+sistem  : Windows-11-...
+python  : 3.13.7 (C:\Users\ali\GhostPilot\.venv\Scripts\python.exe)
+klasör  : C:\Users\ali\GhostPilot
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\ali\GhostPilot\ui.py", line 769, in main
+NameError: name 't' is not defined
+```
+
+> **Bu metnin tamamını** geliştiriciye gönderin — sorun dakikalar içinde bulunur.
+> Erişim anahtarınızı metinden silmeyi unutmayın.
+
+### 4. Kaydı temizleyin
+
+```
+python kur.py hata-temizle
+```
+
+### Kısayol yanlış yeri gösteriyorsa
+
+Kurulum artık kısayolu **kontrol eder** ve yanlışsa kendisi düzeltir:
+
+```
+[3/5] Kısayollar…
+      ✅ kısayollar doğru klasörü gösteriyor
+```
+
+Böyle bir satır görmezseniz kısayolu elle onarın:
+
+```
+python kur.py kisayol ekle
+```
+
+Kısayol her zaman **kurulum yaptığınız klasörü** (örn. `C:\Users\ali\GhostPilot`) çalıştırır — zip'i açtığınız yeri **değil**.
+
+---
+
 ## ⚠️ Bilmeniz gereken 3 şey
 
 1. **Bu program bilgisayarınıza gerçekten erişir.** Sohbet asistanı dosyalarınızı okuyabilir, komut çalıştırabilir. Yalnız güvendiğiniz asistanlara bağlayın.

@@ -133,6 +133,7 @@ python kur.py durum          # is it running?
 python kur.py doktor         # diagnose the installation
 python kur.py kota           # this month's usage
 python kur.py lisans         # plan status
+python kur.py hata           # son hata kaydı (çökme varsa)
 python kur.py dur         # emergency stop — nothing can reach your PC
 ```
 
@@ -208,6 +209,8 @@ See [SECURITY.md](SECURITY.md) · [PRIVACY](GIZLILIK.md) · [TERMS](KOSULLAR.md)
 **Can I use it from my phone?** Yes, with Tailscale: `python kur.py tunel` gives a private HTTPS address.
 
 **Is there a subscription?** No. Free plan, forever. A support key is a donation-based extra, not a requirement.
+
+**The window opens and closes instantly.** Run `python kur.py hata` — every crash is written to `~/.ghostpilot/hata.log` with the file, line and error. Send that text to the developer.
 
 **What if a call fails?** Failed and timed-out calls are refunded to your quota.
 
@@ -422,6 +425,8 @@ Bkz. [GIZLILIK.md](GIZLILIK.md) · [KOSULLAR.md](KOSULLAR.md)
 **Telefonumdan kullanabilir miyim?** Evet, Tailscale ile: `python kur.py tunel` size özel bir HTTPS adresi verir.
 
 **Abonelik var mı?** Yok. Ücretsiz plan süresiz. Destek anahtarı bağışa dayalı bir ekstra, zorunluluk değil.
+
+**Pencere açılıp hemen kapanıyor.** `python kur.py hata` komutunu çalıştırın — her çökme dosya, satır ve hata adıyla `~/.ghostpilot/hata.log` içine yazılır. O metni geliştiriciye gönderin.
 
 **Çağrı başarısız olursa?** Başarısız ve zaman aşımına uğrayan çağrılar kotanıza geri eklenir.
 

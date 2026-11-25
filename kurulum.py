@@ -57,9 +57,11 @@ KOPYALANACAK = [
     "ghostpilot.py", "screen.py", "kur.py", "setup.py", "lisans.py",
     "lisans_online.py", "paketler.py", "diller.py", "sanalortam.py",
     "ui.py", "kurulum_ui.py", "ikon.py", "tepsi.py", "kaldir.py",
+    "kisayol.py", "hata.py",
     "input_bg.py", "goverlay.py", "belge.py",
     "GhostPilot.ico", "icon-256.png", "icon-128.png", "icon-48.png",
-    "chatgpt-icon-256.png",
+    "icon-32.png", "icon-16.png", "icon.png", "icon.svg", "favicon.ico",
+    "chatgpt-icon-256.png", "KURULUM_REHBERI.md", "SECURITY.md",
     "LICENSE", "COPYRIGHT", "README.md", "GIZLILIK.md", "KOSULLAR.md",
     "BASLA.bat", "PANEL.bat", "KURULUM.bat", "KALDIR.bat", "_bitis.bat",
     "basla.sh", "kurulum.sh", "GhostPilot.command",
@@ -191,7 +193,11 @@ def sanalortam_kur(hedef, ilerleme=None):
 def kisayol_kur(hedef, masaustu=True, baslat_menu=True):
     """Masaüstü + Başlat menüsü kısayolu. Döner: oluşturulan yollar."""
     yapilan = []
+    # Kısayol MUTLAKA kurulum dizinindeki dosyayı çalıştırmalı.
+    # Önce ui.py (masaüstü paneli), yoksa BASLA.bat, yoksa ghostpilot.py.
     giris = os.path.join(hedef, "ui.py")
+    if not os.path.exists(giris):
+        giris = os.path.join(hedef, "BASLA.bat")
     if not os.path.exists(giris):
         giris = os.path.join(hedef, "ghostpilot.py")
     if IS_WIN:
@@ -214,22 +220,28 @@ def kisayol_kur(hedef, masaustu=True, baslat_menu=True):
             bm = os.path.join(appdata, "Microsoft", "Windows", "Start Menu", "Programs")
             if os.path.isdir(bm):
                 hedefler.append(os.path.join(bm, f"{APP}.lnk"))
+        # Kısayol KURULUM dizinindeki sanal ortamı kullanmalı — proje (zip) klasörünü değil.
+        py_kisayol = _venv_python(hedef)
         for lnk in hedefler:
-            ps = (
-                "$ErrorActionPreference='Stop';"
-                "$s=(New-Object -ComObject WScript.Shell);"
-                f"$l=$s.CreateShortcut('{lnk}');"
-                f"$l.TargetPath='{_pythonw()}';"
-                f"$l.Arguments='\"{giris}\"';"
-                f"$l.WorkingDirectory='{hedef}';"
-                f"$l.IconLocation='{ikon},0';"
-                f"$l.Description='{APP} — bilgisayarınız için sessiz yardımcı';"
-                "$l.WindowStyle=1;"
-                "$l.Save();"
-            )
+            parcalar = [
+                "$ErrorActionPreference='Stop';",
+                "$s=(New-Object -ComObject WScript.Shell);",
+                f"$l=$s.CreateShortcut('{lnk}');",
+                f"$l.TargetPath='{py_kisayol}';",
+                f"$l.Arguments='\"{giris}\"';",
+                f"$l.WorkingDirectory='{hedef}';",
+            ]
+            if os.path.exists(ikon):
+                parcalar.append(f"$l.IconLocation='{ikon},0';")
+            parcalar += [
+                f"$l.Description='{APP} — bilgisayarınız için sessiz yardımcı';",
+                "$l.WindowStyle=1;",
+                "$l.Save();",
+            ]
             try:
                 subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
-                                "-Command", ps], capture_output=True, text=True, timeout=90)
+                                "-Command", "".join(parcalar)],
+                               capture_output=True, text=True, timeout=90)
                 if os.path.exists(lnk):
                     yapilan.append(lnk)
             except Exception:
@@ -240,8 +252,8 @@ def kisayol_kur(hedef, masaustu=True, baslat_menu=True):
         cmd = os.path.join(hedef, "GhostPilot.command")
         try:
             with open(cmd, "w", encoding="utf-8") as f:
-                f.write("#!/bin/bash\ncd \"$(dirname \"$0\")\"\n"
-                        "exec python3 ui.py\n")
+                f.write("#!%s\ncd \"%s\"\nexec \"%s\" ui.py\n"
+                        % ("/bin/bash", hedef, _venv_python(hedef)))
             os.chmod(cmd, 0o755)
             yapilan.append(cmd)
         except Exception:
@@ -255,7 +267,7 @@ def kisayol_kur(hedef, masaustu=True, baslat_menu=True):
             with open(d, "w", encoding="utf-8") as f:
                 f.write("[Desktop Entry]\nType=Application\n"
                         f"Name={APP}\nComment=Bilgisayarınız için sessiz yardımcı\n"
-                        f"Exec=python3 {os.path.join(hedef, 'ui.py')}\n"
+                        f"Exec={_venv_python(hedef)} {os.path.join(hedef, 'ui.py')}\n"
                         f"Path={hedef}\nIcon={os.path.join(hedef, 'icon-256.png')}\n"
                         "Terminal=false\nCategories=Utility;\n")
             os.chmod(d, 0o755)
@@ -264,6 +276,67 @@ def kisayol_kur(hedef, masaustu=True, baslat_menu=True):
             pass
     return yapilan
 
+
+
+
+def _venv_python(hedef):
+    """Kurulum dizinindeki sanal ortamın Python'u (yoksa sistem Python'u)."""
+    if IS_WIN:
+        adaylar = [os.path.join(hedef, ".venv", "Scripts", "pythonw.exe"),
+                   os.path.join(hedef, ".venv", "Scripts", "python.exe")]
+    else:
+        adaylar = [os.path.join(hedef, ".venv", "bin", "python3"),
+                   os.path.join(hedef, ".venv", "bin", "python")]
+    for a in adaylar:
+        if os.path.exists(a):
+            return a
+    return _pythonw()
+
+def _lnk_hedefi(lnk):
+    """Var olan .lnk dosyasının gerçek hedefini oku. (Windows)"""
+    ps = ("$ErrorActionPreference='Stop';"
+          "$s=(New-Object -ComObject WScript.Shell);"
+          f"$l=$s.CreateShortcut('{lnk}');"
+          "Write-Output ($l.TargetPath + '|' + $l.Arguments + '|' + $l.WorkingDirectory)")
+    try:
+        r = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                            "-Command", ps], capture_output=True, text=True, timeout=45)
+        if r.returncode == 0 and "|" in (r.stdout or ""):
+            h, a, w = (r.stdout.strip().split("|") + ["", "", ""])[:3]
+            return h, a, w
+    except Exception:
+        pass
+    return "", "", ""
+
+
+def kisayol_dogrula(hedef, kisayollar):
+    """Kısayollar gerçekten KURULUM dizinini gösteriyor mu? Sorunlu olanları döndür.
+
+    Bu kontrol 'kısayol yanlış yeri gösteriyor' hatasını yakalar:
+    kısayol kaynak (zip) klasörüne değil, kurulumun yapıldığı klasöre bakmalı.
+    """
+    sorunlu = []
+    for yol in kisayollar:
+        if not yol.lower().endswith(".lnk"):
+            # .command / .desktop için içerik kontrolü
+            try:
+                with open(yol, encoding="utf-8", errors="replace") as f:
+                    icerik = f.read()
+                if hedef not in icerik:
+                    sorunlu.append((yol, f"kurulum dizini yok (beklenen: {hedef})"))
+            except Exception:
+                pass
+            continue
+        hedef_yolu, argumanlar, calisma = _lnk_hedefi(yol)
+        if not hedef_yolu:
+            sorunlu.append((yol, "hedef okunamadı"))
+            continue
+        if hedef not in (argumanlar or ""):
+            sorunlu.append((yol, f"kısayol '{argumanlar.strip()}' çalıştırıyor — "
+                                  f"kurulum dizini ({hedef}) değil"))
+        elif calisma and os.path.normcase(calisma) != os.path.normcase(hedef):
+            sorunlu.append((yol, f"çalışma dizini '{calisma}' — beklenen '{hedef}'"))
+    return sorunlu
 
 def programlar_kaydi(hedef):
     """Windows 'Programlar ve Özellikler' kaydı (yönetici gerekmez)."""
@@ -361,6 +434,26 @@ def konsol_kurum(hedef=None, sessiz=False):
         _yaz(f"        ✅ {x}", "dim")
     if not kis:
         _yaz("        ⚠️  kısayol oluşmadı", "warn")
+    else:
+        bozuk = kisayol_dogrula(hedef, kis)
+        if bozuk:
+            for yol, neden in bozuk:
+                _yaz(f"        ⚠️  {os.path.basename(yol)}: {neden}", "warn")
+            # bozukları sil, doğru olanları yeniden oluştur
+            for yol, _ in bozuk:
+                try:
+                    os.remove(yol)
+                except Exception:
+                    pass
+            yeniden = kisayol_kur(hedef)
+            for x in yeniden:
+                _yaz(f"        ✅ düzeltildi: {x}", "ok")
+            if kisayol_dogrula(hedef, yeniden):
+                _yaz("        ⚠️  kısayol hâlâ doğrulanamadı — elle denetleyin", "warn")
+            else:
+                _yaz("        ✅ kısayollar doğru klasörü gösteriyor", "ok")
+        else:
+            _yaz("        ✅ kısayollar doğru klasörü gösteriyor", "ok")
 
     # ---- kayıt
     _yaz("\n  [4/5] Programlar listesi kaydı…")
