@@ -1512,7 +1512,7 @@ def server_info(base=""):
         "title": "GhostPilot",
         "version": VERSION,
         "icons": ikonlar,
-        "websiteUrl": "https://github.com/Btmcode/GhostPilot",
+        "websiteUrl": "https://github.com/Btmcode/Ghost-Pilot",
     }
 
 
@@ -2329,6 +2329,28 @@ def _onay_gerekli(name):
     return name in RISKLI_ARACLAR
 
 
+
+def _onay_ekrani_var():
+    """Onay ekranı (masaüstü paneli veya tarayıcı paneli) gerçekten açık mı?
+
+    ÖNEMLİ: relay/watchdog pid dosyaları SAYILMAZ — onlar sunucunun kendisidir,
+    onay isteğini gösteremezler. Onay ekranı = /panel/veri adresini düzenli
+    çağıran bir arayüz (masaüstü paneli 3 sn'de bir, tarayıcı 2 sn'de bir).
+    """
+    # 1) Masaüstü arayüzü son 10 sn içinde veri çekti mi?
+    if _arayuz_canli():
+        return True
+    # 2) Tarayıcı paneli açık mı? (.panel_goruldu damgası her /panel/veri çağrısında yazılır)
+    try:
+        t = int(open(os.path.join(CFG_DIR, ".panel_goruldu"),
+                     encoding="utf-8").read().strip() or 0)
+        if (time.time() - t) <= 12:
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def onay_iste(name, args):
     """İşi kuyruğa al, kullanıcı panelden karar verene kadar bekle."""
     import uuid
@@ -2338,6 +2360,17 @@ def onay_iste(name, args):
     with ONAY_KILIT:
         ONAY_BEKLEYEN[oid] = entry
     audit("onay-bekle", f"{name} ({oid})")
+    # Onay ekranı gerçekten açık mı? Kapalıysa 120 sn beklemek yerine
+    # hemen anlaşılır bir hata dön — kullanıcı boş yere beklemesin.
+    if not _onay_ekrani_var():
+        with ONAY_KILIT:
+            ONAY_BEKLEYEN.pop(oid, None)
+        audit("onay-yok", f"{name}: onay ekranı çalışmıyor", ok=False)
+        return {"ok": False, "onay_yok": True, "engine": "approval_unavailable",
+                "error": "Bu işlem ONAY gerektiriyor ama onay ekranı açık değil. "
+                         "İşlem YAPILMADI.",
+                "hint": "GhostPilot panelini açın (python kur.py panel) veya "
+                        "onay modunu değiştirin (python kur.py mod onay riskli)"}
     bitis = time.time() + ONAY_SURESI
     while time.time() < bitis:
         if entry["sonuc"] is not None:
@@ -2740,12 +2773,34 @@ def _oauth_token_count():
         return 0
 
 
+SON_GORUNTU = os.path.join(CFG_DIR, ".arayuz_goruldu")
+
+
+def _arayuz_isaretle():
+    """Arayüz her veri çekişinde buraya zaman yazar → onay ekranı açık mı anlaşılır."""
+    try:
+        with open(SON_GORUNTU, "w", encoding="utf-8") as f:
+            f.write(str(int(time.time())))
+    except Exception:
+        pass
+
+
+def _arayuz_canli(esik=10):
+    """Arayüz son 10 saniye içinde veri çektiyse açık sayılır (3 sn'de bir yenileniyor)."""
+    try:
+        t = int(open(SON_GORUNTU, encoding="utf-8").read().strip() or 0)
+        return (time.time() - t) <= esik
+    except Exception:
+        return False
+
+
 def panel_payload():
     try:
         import input_bg
         busy = input_bg.last_input_age() < 0.45
     except Exception:
         busy = False
+    _arayuz_isaretle()
     return {
         "version": VERSION,
         "running": True,
@@ -3111,6 +3166,12 @@ img{{border-radius:10px}}
                 pass
             return
         if path == "/panel/veri":
+            try:
+                with open(os.path.join(CFG_DIR, ".panel_goruldu"), "w",
+                          encoding="utf-8") as _f:
+                    _f.write(str(int(time.time())))
+            except Exception:
+                pass
             return self._json(200, panel_payload())
 
         if path in ("/", "/health", "/mcp/health"):

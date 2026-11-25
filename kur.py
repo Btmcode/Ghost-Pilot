@@ -636,7 +636,7 @@ def izin(args):
     say(f"     okuma: var · yazma: {'yok' if ro else 'var'}")
     if changed:
         say("\n  ⚠️  Değişikliğin geçerli olması için sunucuyu yeniden başlatın:", "warn")
-        say("     (sunucu penceresinde Ctrl+C, sonra: python kur.py sunucu)")
+        say("     (sunucu penceresinde Ctrl+C, sonra: python kur.py basla)")
     return 0
 
 
@@ -1138,6 +1138,178 @@ def guvenlik(args):
     return 0
 
 
+
+def doktor():
+    """Kurulumu denetler: Python, dosyalar, port, erişim anahtarı, isteğe bağlı bileşenler."""
+    head("Kurulum denetimi")
+    sorun = 0
+
+    def iyi(m):
+        nonlocal sorun
+        say(f"  ✅ {m}", "ok")
+
+    def kotu(m, cozum=""):
+        nonlocal sorun
+        sorun += 1
+        say(f"  ❌ {m}", "err")
+        if cozum:
+            say(f"     → {cozum}")
+
+    def bilgi(m):
+        say(f"  ℹ️  {m}", "dim")
+
+    # 1) Python
+    try:
+        py = python_surum()
+        if py.get("ok"):
+            iyi(f"Python {py['surum']} · {platform.system()} {platform.release()}")
+        else:
+            kotu(f"Python {PY_MIN[0]}.{PY_MIN[1]}+ bulunamadı",
+                 "python-kur komutunu deneyin")
+    except Exception as e:
+        kotu(f"Python denetlenemedi ({e})")
+
+    # 2) Zorunlu dosyalar
+    zorunlu = ["ghostpilot.py", "lisans.py", "diller.py", "paketler.py", "ui.py"]
+    eksik = [f for f in zorunlu if not os.path.exists(os.path.join(HERE, f))]
+    if eksik:
+        kotu(f"Eksik dosya: {', '.join(eksik)}", "zip'i yeniden ayıklayın")
+    else:
+        iyi(f"{len(zorunlu)} zorunlu program dosyası yerinde")
+
+    # 3) Ayar dizini
+    try:
+        a = os.path.join(HOME, ".ghostpilot")
+        os.makedirs(a, exist_ok=True)
+        test = os.path.join(a, ".yazma_testi")
+        open(test, "w").write("x")
+        os.remove(test)
+        iyi(f"Ayar dizini yazılabilir: {a}")
+    except Exception as e:
+        kotu(f"Ayar dizini yazılamıyor: {e}", "klasör izinlerini kontrol edin")
+
+    # 4) Port
+    port = port_cfg()
+    try:
+        import socket
+        s_ = socket.socket()
+        s_.settimeout(1.5)
+        mesgul = s_.connect_ex(("127.0.0.1", port)) == 0
+        s_.close()
+        if mesgul:
+            iyi(f"Port {port}: GhostPilot çalışıyor (sunucu açık)")
+        else:
+            bilgi(f"Port {port}: boş — sunucu kapalı (başla komutuyla açılır)")
+    except Exception:
+        bilgi(f"Port {port}: denetlenemedi")
+
+    # 5) Erişim anahtarı
+    try:
+        d = load_cfg_file()
+        if d.get("token"):
+            iyi("Erişim anahtarı tanımlı")
+        else:
+            kotu("Erişim anahtarı yok", "basla komutu ilk çalıştırmada üretir")
+    except Exception as e:
+        bilgi(f"Erişim anahtarı okunamadı: {e}")
+
+    # 6) İsteğe bağlı bileşenler
+    for ad, mod in (("Ekran görüntüsü (Pillow)", "PIL"), ("Tepsi simgesi (pystray)", "pystray")):
+        try:
+            __import__(mod)
+            iyi(ad)
+        except ImportError:
+            bilgi(f"{ad} yok — isteğe bağlı, gereksinim komutuyla kurulur")
+        except Exception as e:
+            # pystray masaüstü oturumu yoksa da patlayabilir — kurulum sorunu değil
+            bilgi(f"{ad}: bu oturumda kullanılamıyor ({type(e).__name__})")
+
+    # 7) Tailscale (uzaktan erişim)
+    ts, st, dns = ts_state()
+    if not ts:
+        bilgi("Tailscale yok — yalnız yerel ağda çalışır (isteğe bağlı)")
+    elif st == "running":
+        iyi(f"Tailscale çalışıyor: {dns}")
+    else:
+        bilgi(f"Tailscale kurulu ama bağlı değil (durum: {st})")
+
+    # 8) Lisans / kota
+    try:
+        import ghostpilot as G
+        kd = G.kota_durum()
+        if kd.get("pro"):
+            iyi("Destek anahtarı etkin — sınırsız")
+        else:
+            iyi(f"Ücretsiz plan — bu ay {kd['kullanilan']:,}/{kd['limit']:,} çağrı"
+                .replace(",", "."))
+    except Exception:
+        bilgi("Kota bilgisi okunamadı")
+
+    say("")
+    say("  " + "─" * 54)
+    if sorun:
+        say(f"  ⚠️  {sorun} sorun bulundu. Yukarıdaki maddeleri düzeltin.", "warn")
+    else:
+        say("  ✅ Her şey yolunda — GhostPilot kullanıma hazır.", "ok")
+    say("")
+    return 0 if sorun == 0 else 1
+
+def tunel(ac=True):
+    """Tailscale tüneli: tarayıcıdaki ChatGPT ve telefon erişimi için HTTPS adresi."""
+    head("Uzaktan erişim tüneli (Tailscale)")
+    ts, st, dns = ts_state()
+    if not ts:
+        say("  ❌ Tailscale bulunamadı.", "err")
+        say("     Kurmak için:  python kur.py tailscale-kur")
+        return 1
+    if st != "running":
+        say(f"  ❌ Tailscale bağlı değil (durum: {st}).", "err")
+        say("     Tailscale uygulamasını açıp oturum açın, sonra tekrar deneyin.")
+        return 1
+
+    port = port_cfg()
+    if not ac:
+        try:
+            subprocess.run([ts, "funnel", "--bg=false", str(port)],
+                           capture_output=True, text=True, timeout=60)
+            say(f"  ✅ Tünel kapatıldı (port {port}).", "ok")
+            return 0
+        except Exception as e:
+            say(f"  ⚠️  Tünel kapatılamadı: {e}", "warn")
+            return 1
+
+    if not relay_running(port):
+        say("  ℹ️  Sunucu kapalı — önce başlatılıyor…", "dim")
+        try:
+            start_relay_bg()
+            time.sleep(2.5)
+        except Exception:
+            pass
+
+    try:
+        r = subprocess.run([ts, "funnel", "--bg", str(port)],
+                           capture_output=True, text=True, timeout=90)
+        cikti = (r.stdout or "") + (r.stderr or "")
+        if r.returncode != 0:
+            say(f"  ❌ Tünel açılamadı (çıkış {r.returncode}).", "err")
+            for satir in cikti.strip().splitlines()[:4]:
+                say(f"     {satir}", "dim")
+            say("     İpucu: Tailscale hesabında Funnel açık olmalı")
+            say("            (admin panel → DNS → HTTPS certificates + Funnel).")
+            return 1
+        adres = f"https://{dns.rstrip('.')}/mcp" if dns else ""
+        say("  ✅ Tünel açık.", "ok")
+        if adres:
+            say(f"     ChatGPT'ye yapıştırılacak adres:  {adres}", "dim")
+        say("")
+        say("  ⚠️  Bu adres internete açıktır — erişim anahtarı olmadan istek geçmez.", "warn")
+        say("     İşiniz bitince kapatın:  python kur.py tunel-kapat")
+        return 0
+    except Exception as e:
+        say(f"  ❌ Tünel hatası: {e}", "err")
+        return 1
+
+
 def durum():
     head("Sunucu durumu")
     port = port_cfg()
@@ -1147,7 +1319,7 @@ def durum():
         say(f"     http://127.0.0.1:{port}", "dim")
     else:
         say("  🔴 ÇALIŞMIYOR", "err")
-        say("     Başlatmak için: python kur.py sunucu")
+        say("     Başlatmak için: python kur.py basla")
     # Bekçi gerçekten yaşıyor mu? pid dosyası + canlılık kontrolü
     bekci = False
     try:
@@ -1166,7 +1338,7 @@ def durum():
     except Exception:
         bekci = False
     say("  " + ("🛡️  Bekçi aktif — çökerse kendisi geri getirir" if bekci else
-                "⚠️  Bekçi yok — çökerse geri gelmez (python kur.py sunucu)"),
+                "⚠️  Bekçi yok — çökerse geri gelmez (python kur.py basla)"),
         "ok" if bekci else "warn")
     url = tailscale_url(port)
     if url:
@@ -2151,11 +2323,21 @@ def main():
         return start_relay()
     if cmd in ("test", "tani"):
         return run_test()
+    if cmd in ("doktor", "doctor", "denetle", "check", "diagnose"):
+        return doktor()
+    if cmd in ("tunel", "tunnel", "uzaktan-erisim", "funnel"):
+        return tunel(True)
+    if cmd in ("tunel-kapat", "tunnel-off", "funnel-kapat"):
+        return tunel(False)
+    if cmd in ("dur", "durdur", "stop", "kapat", "off"):
+        return durdur()
+    if cmd in ("tam-kapat", "ful-kapat"):
+        return tam_kapat()
     if cmd in ("kaldir", "uninstall", "remove"):
         return uninstall_clients()
     say(f"  Bilinmeyen komut: {cmd}", "err")
-    say("  Geçerli: oto | claude | chatgpt | cursor | vscode | sunucu | test | doctor\n"
-        "           token | izin <yol> | izin-sil <yol> | otomatik | otomatik-kaldir | kaldir")
+    say("  Geçerli: basla | dur | durum | doktor | panel | kota | lisans | paketler\n"
+        "           tunel | tunel-kapat | test | izin <yol> | otomatik | kaldir | guncelle")
     return 1
 
 
