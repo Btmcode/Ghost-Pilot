@@ -174,3 +174,47 @@ PowerShell/`cmd.exe` oturumları, `taskkill /T`, `GetClassNameW`, junction tespi
 | Kurulum | `KALDIR.bat` / `kaldir.py` |
 
 Tüm geliştirme `Ghost-Pilot-dev` içinde; yayın deposu (`bda7bc1`) ve mevcut kurulumlar değiştirilmedi.
+
+
+---
+
+# 9 · GitHub'a gönderme (push)
+
+Kod `bee2d07` commit'inde hazır. Push için kimlik doğrulama gerekir.
+
+## Yol A — Token ile (tek komut dosyası)
+
+1. GitHub → Settings → Developer settings → **Personal access tokens → Fine-grained tokens**
+2. **Only select repositories** → `Btmcode/Ghost-Pilot`
+3. **Permissions → Contents: Read and write** (başka izin gerekmez)
+4. **Expiration: 7 gün**
+5. Token'ı kopyala ve çalıştır:
+
+```bash
+GIT_TOKEN=github_pat_xxx ./push_github.sh
+```
+
+**Güvenlik:** token diske yazılmaz; `.git/config`'e, remote URL'sine veya bir dosyaya
+girmez — yalnız o alt süreçte, bellekte kullanılır. Push bittikten sonra
+<https://github.com/settings/tokens> adresinden **iptal edin**.
+
+## Yol B — Kendi makinenizden
+
+```bash
+git clone https://github.com/Btmcode/Ghost-Pilot.git
+cd Ghost-Pilot
+# zip'i bu klasöre açın (üzerine yazın)
+git add -A
+git commit -m "NEX: 7 faz + 10 dilli README"
+git push
+```
+
+## Doğrulama
+
+Push sonrası:
+
+```bash
+git ls-remote origin main     # uzaktaki özet
+```
+
+GitHub'da README'nin 10 dil bölümü ve ☕ bağış düğmesi görünmeli.
