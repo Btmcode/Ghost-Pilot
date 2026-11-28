@@ -1,12 +1,11 @@
 {
   "name": "ghostpilot",
   "title": "GhostPilot",
-  "version": "5.21.0",
+  "version": "5.22.0",
   "description": "Your real computer, not a sandbox. 44 tools — files, terminal, screen, scheduling. No cloud, no telemetry.",
   "developer": "BtmCode",
   "author": {
     "name": "BtmCode",
-    "fullName": "Ömer Zirve",
     "email": "devcloudpy@gmail.com",
     "url": "https://github.com/Btmcode"
   },

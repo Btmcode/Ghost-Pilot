@@ -77,12 +77,14 @@ _M = {
         "adres_bas": "1 · BAĞLANTI ADRESİN",
         "adres_alt": "Bu adres yalnız bu oturum için geçerli.",
         "adim_bas": "2 · CHATGPT'DE",
+        "adim_ipucu": "Kopyaladığınız adresi ChatGPT'de bu alana yapıştırın.",
         "a1": "Eklentiler sayfasını aç",
         "a1_btn": "chatgpt.com/plugins",
-        "a2": "Sağ üstten **Ekle** → **Özel MCP sunucusu**",
-        "a3": "Ad: **GhostPilot** · Açıklama: bilgisayarım",
-        "a4": "Kimlik doğrulama: **Yok** — OAuth'a dokunmayın",
-        "a5": "Kutuyu işaretle → **Oluştur**",
+        "a6": "Simge: chatgpt-icon-256.png dosyasını seç",
+        "a2": "Sağ üstten Ekle → Özel MCP sunucusu",
+        "a3": "Ad: GhostPilot · Açıklama: bilgisayarım",
+        "a4": "Kimlik doğrulama: Yok — OAuth'a dokunmayın",
+        "a5": "Kutuyu işaretle → Oluştur",
         "test": "3 · DENEYİN",
         "test_alt": "Yeni sohbet → + → GhostPilot → yazın:",
         "test_kod": "ghostpilot_status",
@@ -108,12 +110,14 @@ _M = {
         "adres_bas": "1 · YOUR ADDRESS",
         "adres_alt": "This address is valid for this session only.",
         "adim_bas": "2 · IN CHATGPT",
+        "adim_ipucu": "Paste the address you copied into that field in ChatGPT.",
         "a1": "Open the Plugins page",
         "a1_btn": "chatgpt.com/plugins",
-        "a2": "Top right **Add** → **Custom MCP server**",
-        "a3": "Name: **GhostPilot** · Description: my computer",
-        "a4": "Authentication: **None** — do not pick OAuth",
-        "a5": "Tick the box → **Create**",
+        "a6": "Icon: pick the chatgpt-icon-256.png file",
+        "a2": "Top right Add → Custom MCP server",
+        "a3": "Name: GhostPilot · Description: my computer",
+        "a4": "Authentication: None — do not pick OAuth",
+        "a5": "Tick the box → Create",
         "test": "3 · TRY IT",
         "test_alt": "New chat → + → GhostPilot → type:",
         "test_kod": "ghostpilot_status",
@@ -139,12 +143,14 @@ _M = {
         "adres_bas": "1 · IHRE ADRESSE",
         "adres_alt": "Diese Adresse gilt nur für diese Sitzung.",
         "adim_bas": "2 · IN CHATGPT",
+        "adim_ipucu": "Fügen Sie die kopierte Adresse dort in ChatGPT ein.",
         "a1": "Plugins-Seite öffnen",
         "a1_btn": "chatgpt.com/plugins",
-        "a2": "Oben rechts **Hinzufügen** → **Eigener MCP-Server**",
-        "a3": "Name: **GhostPilot** · Beschreibung: mein Computer",
-        "a4": "Authentifizierung: **Keine** — nicht OAuth wählen",
-        "a5": "Kästchen ankreuzen → **Erstellen**",
+        "a6": "Symbol: Datei chatgpt-icon-256.png wählen",
+        "a2": "Oben rechts Hinzufügen → Eigener MCP-Server",
+        "a3": "Name: GhostPilot · Beschreibung: mein Computer",
+        "a4": "Authentifizierung: Keine — nicht OAuth wählen",
+        "a5": "Kästchen ankreuzen → Erstellen",
         "test": "3 · AUSPROBIEREN",
         "test_alt": "Neuer Chat → + → GhostPilot → eingeben:",
         "test_kod": "ghostpilot_status",
@@ -170,12 +176,14 @@ _M = {
         "adres_bas": "1 · SU DIRECCIÓN",
         "adres_alt": "Esta dirección solo vale para esta sesión.",
         "adim_bas": "2 · EN CHATGPT",
+        "adim_ipucu": "Pegue la dirección copiada en ese campo de ChatGPT.",
         "a1": "Abra la página de Complementos",
         "a1_btn": "chatgpt.com/plugins",
-        "a2": "Arriba a la derecha **Añadir** → **Servidor MCP propio**",
-        "a3": "Nombre: **GhostPilot** · Descripción: mi equipo",
-        "a4": "Autenticación: **Ninguna** — no elija OAuth",
-        "a5": "Marque la casilla → **Crear**",
+        "a6": "Icono: elija el archivo chatgpt-icon-256.png",
+        "a2": "Arriba a la derecha Añadir → Servidor MCP propio",
+        "a3": "Nombre: GhostPilot · Descripción: mi equipo",
+        "a4": "Autenticación: Ninguna — no elija OAuth",
+        "a5": "Marque la casilla → Crear",
         "test": "3 · PRUÉBELO",
         "test_alt": "Chat nuevo → + → GhostPilot → escriba:",
         "test_kod": "ghostpilot_status",
@@ -366,10 +374,15 @@ class Panel:
         self.adres.config(state="readonly")
         self.kopya = btn(adr, m("kopyala"), self.kopyala, "sade", pady=8)
         self.kopya.pack(side="left", padx=(8, 0))
+        # tek tık da kopyalar (küçük dokunmatik/erişilebilirlik kolaylığı)
+        self.adres.bind("<Button-1>", lambda e: (self.kopyala(), "break")[1])
+        self.adres.config(cursor="hand2")
 
         # 2 · adımlar
         tk.Label(ic, text=m("adim_bas"), bg=KART, fg=SILIK,
                  font=(F, 8, "bold"), anchor="w").pack(fill="x", pady=(16, 6))
+        tk.Label(ic, text=m("adim_ipucu"), bg=KART, fg=SILIK,
+                 font=(F, 8), anchor="w", justify="left").pack(fill="x")
 
         a1 = tk.Frame(ic, bg=KART)
         a1.pack(fill="x", pady=2)
@@ -382,7 +395,7 @@ class Panel:
         lb.pack(side="left")
         lb.bind("<Button-1>", lambda e: _ac_url(EKLENTI_URL))
 
-        for no, anahtar in ((2, "a2"), (3, "a3"), (4, "a4"), (5, "a5")):
+        for no, anahtar in ((2, "a2"), (3, "a3"), (4, "a4"), (5, "a5"), (6, "a6")):
             r = satir(ic, no, m(anahtar).replace("**", ""))
             r.pack(fill="x", pady=2)
 
@@ -399,8 +412,10 @@ class Panel:
         kod.bind("<Button-1>", lambda e: self._kopya_metin(m("test_kod")))
 
         # alt çubuk
+        tk.Frame(kok, bg=CIZGI, height=1).pack(side="bottom", fill="x",
+                                                padx=20, pady=(0, 0))
         alt = tk.Frame(kok, bg=ARKA)
-        alt.pack(side="bottom", fill="x", padx=22, pady=14)
+        alt.pack(side="bottom", fill="x", padx=22, pady=12)
         for anahtar, fn in (("lisans", self.lisans_penceresi),
                             ("destek", self.destek_penceresi),
                             ("gelismis", self.gelismis_penceresi),
@@ -571,8 +586,13 @@ class Panel:
         if not a:
             return
         self._kopya_metin(a)
-        self.kopya.config(text=m("kopyalandi"))
-        self.kok.after(1600, lambda: self.kopya.config(text=m("kopyala")))
+        self.kopya.config(text="✓ " + m("kopyalandi"), bg=YESIL_K, fg="#7ee787")
+        self.adres.config(highlightthickness=1, highlightbackground=YESIL)
+        self.kok.after(1800, self._kopya_bitti)
+
+    def _kopya_bitti(self):
+        self.kopya.config(text=m("kopyala"), bg=CIZGI, fg=METIN)
+        self.adres.config(highlightthickness=0)
 
     # --------------------------------------------------------------- lisans
     def lisans_penceresi(self):
@@ -646,7 +666,7 @@ class Panel:
         tk.Label(p, text="BAĞLANTILAR", bg=ARKA, fg=SILIK, font=(F, 8, "bold"),
                  anchor="w").pack(fill="x", padx=26, pady=(22, 6))
         for etiket, deger, url in [
-            ("Geliştirici", "BtmCode · Ömer Zirve", ""),
+            ("Geliştirici", "BtmCode", ""),
             ("E-posta", "devcloudpy@gmail.com", "mailto:devcloudpy@gmail.com"),
             ("Web sitesi", "btmcode.vercel.app", "https://btmcode.vercel.app"),
             ("Kaynak kodu", "github.com/Btmcode/Ghost-Pilot",

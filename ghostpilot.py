@@ -132,7 +132,7 @@ if sys.platform.startswith("win"):
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
-VERSION = "5.21.0"
+VERSION = "5.22.0"
 
 # Windows konsolu varsayılan olarak cp1254/cp1252 kullanır ve emoji yazınca
 # UnicodeEncodeError ile çöker. Hem kendimiz hem alt süreçler için UTF-8'e geç.
@@ -1552,7 +1552,7 @@ def server_info(base=""):
         "termsOfServiceUrl": KOSUL_URL,
         "license": "MIT",
         "_meta": {
-            "com.ghostpilot/developer": GELISTIRICI_TAM,
+            "com.ghostpilot/developer": GELISTIRICI,
             "com.ghostpilot/donate": DESTEK_URL,
             "com.ghostpilot/source": REPO_URL,
         },
@@ -2480,7 +2480,6 @@ def onay_listesi():
 
 # --- geliştirici kimliği (mağaza/eklenti kartlarında görünen bilgi) ---
 GELISTIRICI = "BtmCode"
-GELISTIRICI_TAM = "Ömer Zirve"
 GELISTIRICI_EPOSTA = "devcloudpy@gmail.com"
 
 DESTEK_URL = "https://buymeacoffee.com/btmcode"      # donate / bağış
@@ -2557,7 +2556,7 @@ PANEL_DESTEK = """<div class="bolum" id="destekBolum">
   </a>
 
   <table style="margin-top:16px">
-    <tr><th style="width:170px">Geliştirici</th><td><b>%s</b> · %s</td></tr>
+    <tr><th style="width:170px">Geliştirici</th><td><b>%s</b></td></tr>
     <tr><th>Web sitesi</th><td><a href="%s" target="_blank">%s</a></td></tr>
     <tr><th>Kaynak kodu</th><td><a href="%s" target="_blank">%s</a></td></tr>
     <tr><th>GitHub profili</th><td><a href="%s" target="_blank">%s</a></td></tr>
@@ -2568,7 +2567,7 @@ PANEL_DESTEK = """<div class="bolum" id="destekBolum">
     <tr><th>İletişim</th><td><a href="mailto:%s">%s</a></td></tr>
   </table>
 </div>""" % (DESTEK_URL, REPO_URL, DESTEK_ANAHTAR_URL,
-             GELISTIRICI_TAM, GELISTIRICI,
+             GELISTIRICI,
              SITE_URL, SITE_URL.replace("https://", ""),
              REPO_URL, REPO_URL.replace("https://", ""),
              GITHUB_PROFIL, GITHUB_PROFIL.replace("https://", ""),
