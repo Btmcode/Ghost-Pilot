@@ -132,7 +132,7 @@ if sys.platform.startswith("win"):
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
-VERSION = "5.20.0"
+VERSION = "5.21.0"
 
 # Windows konsolu varsayılan olarak cp1254/cp1252 kullanır ve emoji yazınca
 # UnicodeEncodeError ile çöker. Hem kendimiz hem alt süreçler için UTF-8'e geç.
@@ -2268,7 +2268,26 @@ ONAY_HTML = """<!doctype html><html lang="tr"><head><meta charset="utf-8">
  .istemci b{color:#e2e8f0}
  ul{margin:0 0 20px;padding-left:18px;font-size:13px;color:#b8c6dc}
  li{margin:3px 0}
- .btn-destek{display:inline-block;background:#ffdd00;color:#0b1120;
+ .adim{display:flex;gap:14px;padding:14px 0;border-top:1px solid var(--cizgi)}
+.adim:first-of-type{border-top:0}
+.adim-no{flex:0 0 30px;height:30px;border-radius:50%;background:#1e2d4a;
+ color:#c9d5e8;font-weight:700;font-size:14px;display:flex;align-items:center;
+ justify-content:center}
+.adim-govde{flex:1;min-width:0}
+.adim-bas{font-weight:700;font-size:14px;margin-bottom:8px}
+.dugme-link{display:inline-block;background:#1e2d4a;color:#c9d5e8;font-weight:600;
+ padding:10px 15px;border-radius:10px;text-decoration:none;font-size:13px}
+.kopya-kutu{background:#0d1626;border:1px dashed #3b5075;border-radius:10px;
+ padding:12px;font-size:12px;white-space:pre-wrap;word-break:break-all;
+ cursor:pointer;margin:0;color:#a5d6ff}
+.form-tablo td{padding:8px 10px}
+.form-tablo th{width:170px;vertical-align:top}
+.form-tablo tr.vurgu{background:#2a1c0d}
+.form-tablo tr.vurgu td{color:#f0c07a}
+.kirmizi{color:#f87171;font-weight:700}
+.mini{background:#1e2d4a;color:#9fb3d1;border:0;border-radius:6px;
+ font-size:11px;padding:3px 8px;margin-left:6px;cursor:pointer}
+.btn-destek{display:inline-block;background:#ffdd00;color:#0b1120;
  font-weight:700;padding:12px 18px;border-radius:11px;text-decoration:none;
  font-size:14px;margin:0 8px 8px 0}
 .btn-gh{display:inline-block;background:#1e2d4a;color:#c9d5e8;font-weight:600;
@@ -2648,20 +2667,67 @@ th{color:var(--soluk);font-weight:600;font-size:12px}
 </div>
 
 <div class="bolum" id="baglaBolum">
-  <h2>🔌 ChatGPT'ye / başka programa bağla — 2 adım</h2>
-  <p class="alt" style="margin:0 0 10px">Bilgisayariniz internete kapaliysa ChatGPT ulasamaz.
-     Asagidaki dugme sizin icin gecici bir adres acar; kopyalayip ChatGPT'ye yapistirirsiniz.</p>
-  <button type="button" class="amber" onclick="eylem('bagla',this)">🔗 Baglanti adresini hazirla</button>
-  <button type="button" class="gri" onclick="kopyalaUrl(this)">📋 Adresi kopyala</button>
-  <div id="baglaSonuc" class="alt" style="margin-top:8px"></div>
-  <div id="baglaKutu" style="display:none;margin-top:12px">
-    <table>
-      <tr><th style="width:150px">Sunucu adresi</th>
-          <td><code id="baglaUrl" style="word-break:break-all"></code></td></tr>
-      <tr><th>Kimlik dogrulama</th><td><b>Yok</b> (anahtar adresin icinde)</td></tr>
-      <tr><th>Ne yapmali</th><td>ChatGPT &#8594; Ayarlar &#8594; Baglayicilar &#8594; Olustur
-          &#8594; adres alanina yapistir &#8594; <b>Olustur</b></td></tr>
-    </table>
+  <h2>🔌 ChatGPT'ye bağla — 4 adım</h2>
+
+  <div class="adim">
+    <div class="adim-no">1</div>
+    <div class="adim-govde">
+      <div class="adim-bas">Bağlantı adresini hazırla</div>
+      <button type="button" class="amber" onclick="eylem('bagla',this)">🔗 Adresi hazırla</button>
+      <button type="button" class="gri" onclick="kopyalaUrl(this)">📋 Adresi kopyala</button>
+      <div id="baglaSonuc" class="alt" style="margin-top:8px"></div>
+      <div id="baglaKutu" style="display:none;margin-top:10px">
+        <pre id="baglaUrl" class="kopya-kutu" onclick="kopyalaUrl(this)"
+             title="Kopyalamak için tıklayın"></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="adim">
+    <div class="adim-no">2</div>
+    <div class="adim-govde">
+      <div class="adim-bas">ChatGPT'de Eklentiler sayfasını aç</div>
+      <a class="dugme-link" href="https://chatgpt.com/plugins" target="_blank" rel="noopener">
+        ↗ chatgpt.com/plugins
+      </a>
+      <div class="alt" style="margin-top:6px">
+        Sol menüden <b>Eklentiler</b> de buraya açılır. Sağ üstteki
+        <b>Ekle</b> düğmesine bas, sonra <b>Özel MCP sunucusu</b>nu seç.
+      </div>
+    </div>
+  </div>
+
+  <div class="adim">
+    <div class="adim-no">3</div>
+    <div class="adim-govde">
+      <div class="adim-bas">Açılan formu böyle doldur</div>
+      <table class="form-tablo">
+        <tr><th>Simge</th><td><code>chatgpt-icon-256.png</code>
+            <span class="alt">(klasördeki dosya · 9.9 KB)</span></td></tr>
+        <tr><th>Ad</th><td><code>GhostPilot</code>
+            <button class="mini" onclick="kopyalaMetin('GhostPilot',this)">kopyala</button></td></tr>
+        <tr><th>Açıklama</th><td><code>Bilgisayarımdaki dosyalar ve komutlar</code>
+            <button class="mini" onclick="kopyalaMetin('Bilgisayarımdaki dosyalar ve komutlar',this)">kopyala</button></td></tr>
+        <tr><th>Bağlantı</th><td><b>Sunucu URL'si</b> seçili kalsın</td></tr>
+        <tr><th>Sunucu URL'si</th><td><code id="formUrl">— adres hazır olunca burada —</code>
+            <button class="mini" onclick="kopyalaUrl(this)">kopyala</button></td></tr>
+        <tr class="vurgu"><th>Kimlik doğrulama</th>
+            <td><b>Yok</b> seç · <span class="kirmizi">OAuth'a DOKUNMA</span>
+            <div class="alt">Anahtar adresin içinde geliyor. OAuth seçilirse bağlanmaz.</div></td></tr>
+        <tr><th>Onay kutusu</th><td><b>"Anladım ve devam etmek istiyorum"</b>u işaretle</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="adim">
+    <div class="adim-no">4</div>
+    <div class="adim-govde">
+      <div class="adim-bas">Oluştur'a bas ve deneyin</div>
+      <div class="alt">
+        Yeni bir sohbet aç → sohbette <b>+</b> → <b>GhostPilot</b> → yaz:
+        <code>ghostpilot_status</code>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2794,6 +2860,8 @@ async function eylem(k, btn){
         const p = msg.split('|');
         sonUrl = p[2] || '';
         document.getElementById('baglaUrl').textContent = sonUrl;
+        var fu = document.getElementById('formUrl');
+        if(fu){ fu.textContent = sonUrl; }
         kutu.style.display = 'block';
         box.textContent = '✅ Adres hazir (' + p[1] + '). Kopyalayip ChatGPT ekranina yapistirin.';
         box.style.color = '#22c55e';

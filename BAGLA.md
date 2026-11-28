@@ -1,100 +1,164 @@
-# Bağlanmak — tek ekran, tek düğme
+# ChatGPT'ye bağlanma — form alanları dahil, birebir
 
-## 1. Aç
+Bu belge ChatGPT'nin **"Özel MCP sunucusu ekle"** formunu doldurmayı anlatır.
+Her alanın karşısında ne yazacağınız yazılı. Kopyalayıp yapıştırabilirsiniz.
 
-Masaüstündeki **👻 GhostPilot** simgesine çift tıkla.
+---
 
-Karşına **tek ekran** çıkar. Üzerinde **tek büyük yeşil düğme** var:
+## Adım 1 — Programı aç, adresi üret
 
-> ## 🔗 ChatGPT'ye Bağlan
+1. Masaüstündeki **👻 GhostPilot** simgesine çift tıklayın.
+2. **ChatGPT'ye bağlan** düğmesine basın.
+3. 10–40 saniye bekleyin. Ekranda bir adres çıkar:
+   ```
+   https://xxxxx-xx-xx-xx.free.pinggy.net/mcp?token=abc123...
+   ```
+4. **Kopyala** düğmesine basın.
 
-## 2. Düğmeye bas
+> Bu adresin içinde erişim anahtarı var. Kimseyle paylaşmayın.
 
-Bir kez bas. 10–40 saniye bekle.
+---
 
-Ekranda adresin çıkar:
+## Adım 2 — ChatGPT'de Eklentiler sayfasını aç
+
+Doğrudan link:
+
+### 👉 https://chatgpt.com/plugins
+
+Sol menüden **Eklentiler**'e basarak da aynı yere gelirsiniz.
+
+---
+
+## Adım 3 — "Ekle" → "Özel MCP sunucusu"
+
+Sayfanın **sağ üstünde** mavi **Ekle** düğmesi var. Ona basın.
+
+Açılan listede **Özel MCP sunucusu** seçeneğini seçin.
+
+Karşınıza şu form çıkar:
 
 ```
-https://xxxxx-xx-xx-xx.free.pinggy.net/mcp?token=abc123...
+┌─ Özel MCP sunucusu ekle ────────────────────┐
+│  Simge (isteğe bağlı)      [ + ]              │
+│  Ad                       [            ]     │
+│  Açıklama (isteğe bağlı)  [            ]     │
+│  Bağlantı         (Sunucu URL'si) (Tünel)    │
+│  [ https://example.com/mcp            ]      │
+│  Kimlik doğrulama        [ OAuth ▾ ]         │
+│  □ Anladım ve devam etmek istiyorum          │
+│                       [İptal]  [Ekle]        │
+└──────────────────────────────────────────────┘
 ```
 
-Yanındaki **📋 Adresi Kopyala** düğmesine bas. "✅ Kopyalandı" yazacak.
+---
 
-## 3. ChatGPT'ye yapıştır
+## Adım 4 — Alanları böyle doldurun
 
-Ekranda adımlar zaten yazılı. Sıra şu:
+Her satır bir alan. **Aynen** yazın.
 
-| # | Nerede | Ne yapacaksın |
+| Formdaki alan | Ne yazacaksınız | Nasıl |
 |---|---|---|
-| 1 | ChatGPT | **Ayarlar → Bağlayıcılar** |
-| 2 | Sağ üst | **Gelişmiş → Geliştirici modu**nu aç |
-| 3 | **Oluştur** | Adres alanına **yapıştır** |
-| 4 | Kimlik doğrulama | **Yok** |
-| 5 | **Oluştur** | Bitti |
+| **Simge** | Klasördeki `chatgpt-icon-256.png` dosyası | **+** işaretine bas → dosyayı seç. 256×256 PNG, 9.9 KB — sınırın altında ✅ |
+| **Ad** | `GhostPilot` | Aşağıdaki kutudan kopyala |
+| **Açıklama** | `Bilgisayarımdaki dosyalar ve komutlar` | Aşağıdaki kutudan kopyala |
+| **Bağlantı** | **Sunucu URL'si** seçili kalsın | Dokunmayın |
+| **Sunucu URL'si** | Adım 1'de kopyaladığınız adres | Yapıştır (Ctrl+V) |
+| **Kimlik doğrulama** | **Yok** | 🔴 **OAuth'u SEÇMEYİN** |
+| **Onay kutusu** | ☑ işaretleyin | "Anladım ve devam etmek istiyorum" |
 
-Sonra **yeni sohbet** aç, sohbette **`+`** → **GhostPilot** → yaz:
+### Kopyalanacak metinler
 
-> ghostpilot_status
+**Ad:**
+```
+GhostPilot
+```
 
-## Kapatmak
-
-Aynı düğme artık **⛔ Bağlantıyı Kapat** yazıyor. Ona bas. Programı kapatsan da
-bağlantı kesilir — arkada hiçbir şey kalmaz.
+**Açıklama:**
+```
+Bilgisayarımdaki dosyalar ve komutlar
+```
 
 ---
 
-## Sık sorulan
+## 🔴 En sık yapılan hata: Kimlik doğrulama
 
-**Adres değişir mi?** Her bağlandığında değişir. Eski adres çalışmaz.
+Form açıldığında **Kimlik doğrulama** alanı **OAuth** yazıyor. **Bunu değiştirin.**
 
-**Anahtar nerede?** Adresin içinde (`?token=...`). O yüzden ChatGPT'de
-"Kimlik doğrulama: Yok" seçiyorsun.
+| Seçim | Sonuç |
+|---|---|
+| **OAuth** ❌ | Bağlanmaz. Sürekli hata verir. |
+| **Yok** ✅ | Çalışır. |
 
-**Adres kimseye gitmiyor mu?** Yalnız senin bilgisayarınla ChatGPT arasında.
-Ekran görüntüsü alırken adresi kapat.
-
-**Yavaş?** İlk cevap 5–10 saniye sürebilir. Normal.
+**Neden?** GhostPilot'un erişim anahtarı **adresin içinde** geliyor
+(`?token=...`). Ayrıca OAuth akışına gerek yok. OAuth seçilirse ChatGPT
+anahtarı aramaya çalışır, bulamaz, bağlanamaz.
 
 ---
 
-## Hiç ücret ödemeden kullanmak istiyorsan
+## Adım 5 — Ekle'ye bas ve dene
 
-Şunu bilmen gerekiyor: **ChatGPT'ye bağlanmak ücretli plan istiyor.** Bu bir
-OpenAI kısıtı — özel bağlayıcılar (Connectors) ücretsiz planda açık değil.
-
-GhostPilot bunu değiştiremez. Ama **tamamen ücretsiz** yollar var:
-
-| Program | Ücret | Tünel | Kurulum |
-|---|---|---|---|
-| **Claude Desktop** | ✅ Ücretsiz | ❌ Gerekmez | `python kur.py claude` |
-| **Cursor** | ✅ Ücretsiz | ❌ Gerekmez | `python kur.py cursor` |
-| **VS Code + Copilot** | ✅ Ücretsiz | ❌ Gerekmez | `python kur.py cursor` |
-| ChatGPT (web) | 💳 Plus gerekir | ✅ Gerekir | yukarıdaki 3 adım |
-
-**En kolay ve en ucuz yol: Claude Desktop.**
-
-Aynı bilgisayarda çalıştığı için tünel, hesap, adres — hiçbiri gerekmez.
-GhostPilot'u bir kez bağlarsın, Claude bilgisayarını kullanır. Ücret yok.
-
-Kurulumu:
+1. Sağ alttaki **Ekle** düğmesine basın.
+2. ChatGPT "GhostPilot bağlandı" gibi bir şey gösterir.
+3. **Yeni bir sohbet** açın.
+4. Sohbette **`+`** işaretine basın → **GhostPilot**'u seçin.
+5. Şunu yazın:
 
 ```
-python kur.py claude
+ghostpilot_status aracını çalıştır
 ```
 
-Tek komut. Sonra Claude Desktop'ı aç, bilgisayarını kullanabildiğini görürsün.
+Cevap geldiyse **tamam** ✅
+
+Artık gerçek işleri yapabilirsiniz:
+
+```
+Masaüstümdeki dosyaları listele
+```
+```
+Bu projeyi test et ve sonucu söyle
+```
+```
+Ekran görüntüsü al ve ne gördüğünü anlat
+```
 
 ---
 
 ## Bir şey ters giderse
 
-| Ne görüyorsun | Ne yapmalı |
-|---|---|
-| Düğme "Adres hazırlanıyor…" de kalıyor | İnterneti kontrol et, 1 dakika sonra tekrar bas |
-| "Bağlanamadı" | Altındaki yazıya bak; genelde internet yok ya da güvenlik duvarı |
-| Adres çıktı ama ChatGPT bağlanmıyor | 📋 Kopyala'yı kullan, elle seçme (uzun adres kolay eksilir) |
-| ChatGPT'de "Oluştur" yok | Geliştirici modu kapalı — 2. satırı tekrar yap |
-| 401 hatası | Düğmeye tekrar bas, yeni adresi yapıştır |
+| Ne görüyorsunuz | Sebep | Çözüm |
+|---|---|---|
+| **Ekle** düğmesini bulamıyorum | Sayfa eski | Sayfayı yenileyin: `chatgpt.com/plugins` |
+| "Özel MCP sunucusu" yok | Geliştirici modu kapalı | Ayarlar → Bağlayıcılar → Gelişmiş → **Geliştirici modu**nu açın |
+| Simge yüklenmiyor | Dosya 10 KB'dan büyük | Klasördeki `chatgpt-icon-256.png` kullanın (9.9 KB) |
+| Bağlanamadı / kırmızı hata | Kimlik doğrulama OAuth seçili | Formu düzenleyin → **Yok** yapın |
+| Bağlanamadı (başka sebep) | Adres yanlış ya da program kapalı | GhostPilot açık mı? **Kopyala** düğmesini kullanın |
+| 401 hatası | Anahtar değişmiş | Programda düğmeye tekrar basın, yeni adresi yapıştırın |
+| Bağlandı ama hiç kullanmıyor | Sohbette seçilmemiş | Sohbette `+` → GhostPilot |
+| Cevaplar çok yavaş | Tünel gecikmesi | Normaldir; ilk cevap 5–10 saniye |
 
-Hâlâ olmuyorsa: **Gelişmiş** düğmesine bas. Hata kaydı orada yazılı.
-Kopyalayıp bana gönder, bakarım.
+Hâlâ olmuyorsa: GhostPilot'ta **Gelişmiş** → **Hata kaydı** → kopyalayıp gönderin.
+
+---
+
+## Kapatmak
+
+Programda **Bağlantıyı kapat** düğmesine basın.
+Programı kapatmak da bağlantıyı keser. Arkada hiçbir şey kalmaz.
+
+---
+
+## Ücretsiz kullanmak istiyorsanız — dürüst cevap
+
+ChatGPT'de **özel MCP sunucusu eklemek ücretli plan gerektirir.**
+Bu OpenAI'nin kısıtı, GhostPilot'un değil. Biz bunu değiştiremeyiz.
+
+**Tamamen ücretsiz alternatifler:**
+
+| Program | Ücret | Tünel | Komut |
+|---|---|---|---|
+| **Claude Desktop** | ✅ Ücretsiz | ❌ Gerekmez | `python kur.py claude` |
+| **Cursor** | ✅ Ücretsiz | ❌ Gerekmez | `python kur.py cursor` |
+| **VS Code** | ✅ Ücretsiz | ❌ Gerekmez | `python kur.py cursor` |
+
+Aynı bilgisayarda çalıştıkları için tünel, hesap, adres — hiçbiri gerekmez.
+**En kolay ve en ucuz yol Claude Desktop.** Tek komut, 2 dakika.
