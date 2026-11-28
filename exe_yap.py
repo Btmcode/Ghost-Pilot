@@ -31,11 +31,16 @@ GOMULE = [
     "lisans_online.py", "paketler.py", "diller.py", "sanalortam.py",
     "ui.py", "kurulum_ui.py", "ikon.py", "tepsi.py", "kaldir.py",
     "input_bg.py", "goverlay.py", "belge.py",
+    # v6-DEV · yedi faz motoru + PTY yardımcısı (EXE içine gömülmeli,
+    # aksi hâlde kurulumdan sonra araçlar "modül yok" der)
+    "oturum.py", "arama.py", "dosya.py", "gui.py", "izleme.py",
+    "cihaz.py", "guvenlik.py", "moduller.py", "pty_yardimci.py",
     "GhostPilot.ico", "icon-256.png", "icon-128.png", "icon-48.png",
     "chatgpt-icon-256.png",
     "LICENSE", "COPYRIGHT", "README.md", "GIZLILIK.md", "KOSULLAR.md",
     "BASLA.bat", "PANEL.bat", "KURULUM.bat", "KALDIR.bat", "_bitis.bat",
-    "basla.sh", "kurulum.sh", "GhostPilot.command",
+    "basla.sh", "kurulum.sh",
+    # GhostPilot.command yalnız macOS dağıtımında bulunur (bu depoda yok)
 ]
 
 

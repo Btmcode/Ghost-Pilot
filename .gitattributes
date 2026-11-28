@@ -1,8 +1,5 @@
-# Windows batch files must keep CRLF to run correctly
+# Tüm metin dosyaları LF ile saklanır (Windows'ta CRLF'e çevrilmez)
+* text=auto eol=lf
 *.bat text eol=crlf
-*.command text eol=lf
-*.sh text eol=lf
-*.py text eol=lf
-*.md text eol=lf
-*.ico binary
 *.png binary
+*.ico binary

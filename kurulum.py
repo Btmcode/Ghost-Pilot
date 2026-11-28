@@ -60,12 +60,17 @@ KOPYALANACAK = [
     "kisayol.py", "hata.py",
     "input_bg.py", "goverlay.py", "belge.py",
     "sanaldunya.py", "ui_bul.py", "goz.py", "hizli.py",
+    # v6-DEV · yeni motorlar (Faz 1-7)
+    "oturum.py", "arama.py", "dosya.py", "gui.py", "izleme.py",
+    "cihaz.py", "guvenlik.py", "moduller.py", "pty_yardimci.py",
+    "testler.py", "testler_windows.py", "TEST_RAPORU.md",
+    "yap_exe.bat", "FULL_SURUM.md",
     "GhostPilot.ico", "icon-256.png", "icon-128.png", "icon-48.png",
     "icon-32.png", "icon-16.png", "icon.png", "icon.svg", "favicon.ico",
     "chatgpt-icon-256.png", "KURULUM_REHBERI.md", "CHATGPT_EKLEME.md", "BAGLA.md", "eklenti.json", "SECURITY.md",
     "LICENSE", "COPYRIGHT", "README.md", "GIZLILIK.md", "KOSULLAR.md",
     "BASLA.bat", "PANEL.bat", "KURULUM.bat", "KALDIR.bat", "_bitis.bat",
-    "basla.sh", "kurulum.sh", "GhostPilot.command",
+    "basla.sh", "kurulum.sh",  # GhostPilot.command macOS'ta üretilir
 ]
 
 BAGIMLILIKLAR = ["pillow", "pystray"]
@@ -497,6 +502,32 @@ def konsol_kurum(hedef=None, sessiz=False):
     return 0
 
 
+def _tam_mod_isaretle(hedef=None):
+    """Kurulum sonrası SINIRSIZ MODU işaretle (config.json)."""
+    try:
+        import json as _json
+        klasor = os.path.join(os.path.expanduser("~"), ".ghostpilot")
+        os.makedirs(klasor, exist_ok=True)
+        yol = os.path.join(klasor, "config.json")
+        try:
+            with open(yol, "r", encoding="utf-8") as f:
+                d = _json.load(f)
+        except Exception:
+            d = {}
+        d["kota_sinirsiz"] = True
+        d["lisans_gerekli"] = False
+        gecici = yol + ".tmp"
+        with open(gecici, "w", encoding="utf-8") as f:
+            _json.dump(d, f, ensure_ascii=False, indent=1)
+        os.replace(gecici, yol)
+        _yaz("  ✅ SINIRSIZ MOD açıldı (kota/lisans kapalı, güvenlik kapıları AYNEN geçerli)",
+             "ok")
+        return True
+    except Exception as e:
+        _yaz(f"  ⚠️  Sınırsız mod işaretlenemedi: {e}", "warn")
+        return False
+
+
 if __name__ == "__main__":
     arg = sys.argv[1:]
     hedef = None
@@ -505,6 +536,10 @@ if __name__ == "__main__":
         i = arg.index("--hedef")
         if i + 1 < len(arg):
             hedef = arg[i + 1]
+    # --tam / --sinirsiz : kurulumdan sonra SINIRSIZ MODU açar (kota + lisans
+    # kapalı). Varsayılan davranış DEĞİŞMEZ (ücretsiz plan: 20.000 çağrı/ay).
+    if "--tam" in arg or "--sinirsiz" in arg:
+        _tam_mod_isaretle(hedef)
     if "--konsol" in arg or sessiz or not IS_WIN:
         sys.exit(konsol_kurum(hedef, sessiz))
     # Windows: grafik kurulum (kurulum_gui.py)

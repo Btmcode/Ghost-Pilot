@@ -72,6 +72,14 @@ def kota_sifirla():
             os.remove(KOTA_AUDIT_ISARET)
         except Exception:
             pass
+        # İmzalı cihaz mührü de temizlenmeli: mühür "EN AZ bu kadar" alt sınırı
+        # tutar ve `_muhur_yaz` değeri ASLA düşürmez. Silinmezse _kota_yukle()
+        # eski mühür sayacını geri getirir ve sıfırlama işe yaramaz.
+        # (Mühür silme yetkisi yalnız yerel kurcalama temizliği içindir.)
+        try:
+            os.remove(MUHUR_DOSYA)
+        except Exception:
+            pass
     audit("kota-sifirla", "sayaç sıfırlandı")
     return {"ok": True, "mesaj": "Aylık sayaç sıfırlandı."}
 
@@ -170,6 +178,11 @@ DEFAULT_CFG = {
     # - Bearer / ?token= ikincil yol (Claude Desktop, curl, elle test)
     # Kapatmak için: python kur.py guvenlik kapat   (ÖNERİLMEZ)
     "require_token": True,
+    # SINIRSIZ MOD: destek anahtarı olmadan da kota/lisans kapalı çalışır.
+    # "kota_sinirsiz": True → aylık 20.000 sınırı UYGULANMAZ, lisans istenmez.
+    # Varsayılan False: ücretsiz kota modeli (20.000 çağrı/ay) korunur.
+    "kota_sinirsiz": False,
+    "lisans_gerekli": True,
     # Salt-okunur mod: yazma/silme/terminal/girdi KAPALI, yalnız bakılabilir
     "read_only": False,
     # Onay: "riskli" (sil/terminal/yaz varsayılan), "hepsi", "kapali"
@@ -1451,7 +1464,12 @@ def t_kota(args):
     kd = kota_durum()
     lb = kd.get("lisans_bilgi") or {}
     satir = []
-    if kd.get("pro"):
+    if kd.get("sinirsiz_mod"):
+        satir.append("SINIRSIZ MOD açık — aylık sınır uygulanmıyor, "
+                     "lisans/destek anahtarı istenmiyor.")
+        satir.append(f"Bu ay yine de sayıldı: {kd['kullanilan']:,} çağrı "
+                     f"(yalnız istatistik)".replace(",", "."))
+    elif kd.get("pro"):
         satir.append("Destek anahtarı etkin — çağrılar sınırsız.")
         if lb.get("plan_adi"):
             satir.append(f"Paket: {lb['plan_adi']}"
@@ -1548,6 +1566,736 @@ TOOLS = {
                  {"job_id": {"type": "string"}}, ["job_id"]),
     "jobs": (t_jobs, "Çalışan/biten arka plan işlerini listeler.", {}),
 }
+# ============================================================================
+#  v6-DEV · GÜVENLİK — araç gövdeleri (Faz 7)
+# ============================================================================
+def _guvenlik():
+    try:
+        import guvenlik
+        return guvenlik
+    except Exception:
+        return None
+
+
+def t_check_action(a):
+    Gv = _guvenlik()
+    if not Gv:
+        return {"ok": False, "error": "guvenlik modülü bulunamadı."}
+    tool = str(a.get("tool") or a.get("arac") or "run_shell")
+    args = a.get("args") or a.get("params") or {}
+    if a.get("command") and not args:
+        args = {"command": a.get("command")}
+    r = Gv.karar(tool, args, _kokler(False),
+                 okuma_kokleri=_kokler(True),
+                 kademe_limiti=int(CFG.get("kademe_limiti") or 3),
+                 mod=str(CFG.get("mod") or "normal"))
+    r["ok"] = True
+    r["tool"] = tool
+    return r
+
+
+def t_approve(a):
+    Gv = _guvenlik()
+    if not Gv:
+        return {"ok": False, "error": "guvenlik modülü bulunamadı."}
+    tool = str(a.get("tool") or a.get("arac") or "")
+    if not tool:
+        return {"ok": False, "error": "tool gerekli (onaylanacak araç)."}
+    args = a.get("args") or a.get("params") or {}
+    r = Gv.onay_ver(tool, args, kaynak="kullanici",
+                    not_metni=a.get("note") or a.get("not") or "")
+    audit("approve_action", tool[:60], r.get("ok", False))
+    return r
+
+
+def t_list_approvals(_a=None):
+    Gv = _guvenlik()
+    if not Gv:
+        return {"ok": False, "error": "guvenlik modülü bulunamadı."}
+    return Gv.onay_listesi()
+
+
+def t_policy_test(_a=None):
+    Gv = _guvenlik()
+    if not Gv:
+        return {"ok": False, "error": "guvenlik modülü bulunamadı."}
+    return Gv.kendini_test()
+
+
+# ============================================================================
+#  v6-DEV · ÇOKLU CİHAZ — araç gövdeleri (Faz 6)
+# ============================================================================
+def _cihaz():
+    try:
+        import cihaz
+        return cihaz
+    except Exception:
+        return None
+
+
+def t_list_devices(_a=None):
+    C = _cihaz()
+    if not C:
+        return {"ok": False, "error": "cihaz modülü (cihaz.py) bulunamadı."}
+    return C.cihaz_listesi()
+
+
+def t_add_device(a):
+    C = _cihaz()
+    if not C:
+        return {"ok": False, "error": "cihaz modülü bulunamadı."}
+    r = C.cihaz_ekle(a.get("device_id") or a.get("id"),
+                     a.get("url"),
+                     ad=a.get("name") or a.get("ad") or "",
+                     anahtar=a.get("key") or a.get("anahtar") or "",
+                     allow_tools=a.get("allow_tools"),
+                     platform_adi=a.get("platform"),
+                     etiketler=a.get("tags") or a.get("etiketler"))
+    audit("add_device", str(a.get("device_id") or a.get("id"))[:60], r.get("ok", False))
+    r.pop("anahtar_asil", None)
+    return r
+
+
+def t_remove_device(a):
+    C = _cihaz()
+    if not C:
+        return {"ok": False, "error": "cihaz modülü bulunamadı."}
+    return C.cihaz_cikar(str(a.get("device_id") or a.get("id") or ""))
+
+
+def t_health(a):
+    C = _cihaz()
+    if not C:
+        return {"ok": False, "error": "cihaz modülü bulunamadı."}
+    did = a.get("device_id") or a.get("id")
+    if not did or did in ("hepsi", "all"):
+        sonuc = [C.saglik(x["device_id"]) for x in C.cihaz_listesi()["cihazlar"]]
+        return {"ok": all(z.get("ok") for z in sonuc) if sonuc else True,
+                "sayi": len(sonuc),
+                "cihazlar": [{"device_id": z["device_id"], "durum": z["durum"],
+                              "sure_ms": z["sure_ms"]} for z in sonuc]}
+    return C.saglik(str(did))
+
+
+def t_device_call(a):
+    """Uzak cihazda araç çağır. device_id yoksa yerel çalışır."""
+    C = _cihaz()
+    if not C:
+        return {"ok": False, "error": "cihaz modülü bulunamadı."}
+    did = str(a.get("device_id") or a.get("cihaz") or "local")
+    tool = str(a.get("tool") or a.get("arac") or "")
+    if not tool:
+        return {"ok": False, "error": "tool gerekli.",
+                "ipucu": "list_devices ile cihazları, status ile araçları görün."}
+    r = C.cagri(did, tool, a.get("args") or a.get("params") or {},
+                timeout=int(a.get("timeout") or 60))
+    audit("device_call", "%s→%s" % (did, tool), r.get("ok", False))
+    return r
+
+
+# ============================================================================
+#  v6-DEV · GÖZLEMLENEBİLİRLİK — araç gövdeleri (Faz 5)
+# ============================================================================
+def _izleme():
+    try:
+        import izleme
+        return izleme
+    except Exception:
+        return None
+
+
+def t_recent_calls(a):
+    I = _izleme()
+    if not I:
+        return {"ok": False, "error": "izleme modülü (izleme.py) bulunamadı."}
+    return I.son_cagrilar(int(a.get("count") or a.get("limit") or 50),
+                          tool=a.get("tool"),
+                          sadece_hata=bool(a.get("errors_only")),
+                          device_id=a.get("device_id"))
+
+
+def t_usage_stats(a):
+    I = _izleme()
+    if not I:
+        return {"ok": False, "error": "izleme modülü bulunamadı."}
+    r = I.kullanim(str(a.get("period") or a.get("donem") or "gun"))
+    r["dosya"] = I.dosya_boyut()
+    return r
+
+
+def t_audit_log(a):
+    I = _izleme()
+    if not I:
+        return {"ok": False, "error": "izleme modülü bulunamadı."}
+    return I.denetim_kaydi(int(a.get("count") or 100),
+                           tool=a.get("tool"),
+                           sadece_hata=bool(a.get("errors_only")),
+                           arama=a.get("search"))
+
+
+def t_hud(a):
+    I = _izleme()
+    if not I:
+        return {"ok": False, "error": "izleme modülü bulunamadı."}
+    if a.get("action") or a.get("islem"):
+        return I.hud_guncelle(a.get("device_id") or "local",
+                              a.get("window") or a.get("pencere") or "",
+                              a.get("action") or a.get("islem") or "",
+                              a.get("result") or a.get("sonuc") or "")
+    return I.hud_oku()
+
+
+def t_mask_test(_a=None):
+    I = _izleme()
+    if not I:
+        return {"ok": False, "error": "izleme modülü bulunamadı."}
+    return I.maskeleme_testi()
+
+
+# ============================================================================
+#  v6-DEV · GUI MOTORU — araç gövdeleri (Faz 4)
+# ============================================================================
+def _gui_mod():
+    try:
+        import gui
+        return gui
+    except Exception:
+        return None
+
+
+def t_get_window_info(a):
+    G = _gui_mod()
+    if not G:
+        return {"ok": False, "error": "gui motoru (gui.py) bulunamadı."}
+    return G.pencere_bilgi(str(a.get("title") or a.get("match") or ""),
+                          hwnd=int(a.get("id") or a.get("hwnd") or 0))
+
+
+def t_find_ui_element(a):
+    G = _gui_mod()
+    if not G:
+        return {"ok": False, "error": "gui motoru bulunamadı."}
+    hedef = str(a.get("text") or a.get("name") or a.get("hedef") or "")
+    if not hedef:
+        return {"ok": False, "error": "text gerekli (öğe adı/yazısı)."}
+    return G.oge_bul(hedef, str(a.get("window") or a.get("pencere") or ""))
+
+
+def t_interact_ui(a):
+    G = _gui_mod()
+    if not G:
+        return {"ok": False, "error": "gui motoru bulunamadı."}
+    hedef = str(a.get("text") or a.get("name") or a.get("hedef") or "")
+    eylem = str(a.get("action") or a.get("eylem") or "click")
+    if not hedef and eylem not in ("click_at",):
+        return {"ok": False, "error": "text gerekli (öğenin yazısı)."}
+    r = G.oge_etkiles(hedef, eylem=eylem,
+                      deger=a.get("value") if "value" in a else a.get("deger"),
+                      pencere=str(a.get("window") or a.get("pencere") or ""),
+                      dogrula=bool(a.get("verify", True)))
+    audit("interact_with_ui_element", "%s · %s" % (hedef[:40], eylem),
+          r.get("ok", False))
+    return r
+
+
+def t_vm_koordinat(a):
+    G = _gui_mod()
+    if not G:
+        return {"ok": False, "error": "gui motoru bulunamadı."}
+    istemci = a.get("client") or a.get("istemci")
+    if not istemci:
+        baslik = str(a.get("window") or "")
+        bilgi = G.pencere_bilgi(baslik)
+        if not bilgi.get("ok"):
+            return {"ok": False, "error": "Pencere bulunamadı: %s" % baslik}
+        r = bilgi.get("rect") or {}
+        istemci = [r.get("x", 0), r.get("y", 0), r.get("w", 0), r.get("h", 0)]
+    yon = str(a.get("direction") or "guest_to_host").lower()
+    mw = int(a.get("guest_width") or 1920)
+    mh = int(a.get("guest_height") or 1080)
+    kay = a.get("scroll") or [0, 0]
+    if yon.startswith("host"):
+        r = G.host_esle(int(a.get("x") or 0), int(a.get("y") or 0),
+                        istemci, mw, mh, a.get("scale"), kay)
+    else:
+        r = G.misafir_esle(int(a.get("x") or 0), int(a.get("y") or 0),
+                           istemci, mw, mh, a.get("scale"), kay)
+    r["istemci"] = istemci
+    r["yon"] = yon
+    return r
+
+
+# ============================================================================
+#  v6-DEV · DOSYA SİSTEMİ — araç gövdeleri (Faz 3)
+# ============================================================================
+def _dosya_mod():
+    try:
+        import dosya
+        return dosya
+    except Exception:
+        return None
+
+
+def _kokler(okuma=True):
+    """İzin verilen kökler (sanal kutu açıksa yalnız kutu)."""
+    sd = _sanal()
+    if sd and sd.acik(CFG):
+        return sd.kokler()
+    return (CFG.get("read_roots") if okuma else CFG.get("write_roots")) or [HOME]
+
+
+def t_read_multiple(a):
+    D = _dosya_mod()
+    if not D:
+        return {"ok": False, "error": "dosya motoru (dosya.py) bulunamadı."}
+    yollar = a.get("paths") or a.get("files") or a.get("yollar") or []
+    r = D.coklu_oku(yollar, _kokler(True))
+    audit("read_multiple_files", "%d dosya" % len(yollar) if isinstance(yollar, list) else "?",
+          r.get("ok", False))
+    return r
+
+
+def t_edit_block(a):
+    D = _dosya_mod()
+    if not D:
+        return {"ok": False, "error": "dosya motoru bulunamadı."}
+    yol = a.get("path") or a.get("file") or a.get("yol") or ""
+    if not yol:
+        return {"ok": False, "error": "path gerekli."}
+    # tek blok kısayolu: {old:..., new:...}
+    bloklar = a.get("blocks") or a.get("bloklar")
+    if not bloklar and (a.get("old") or a.get("eski")):
+        bloklar = [{"old": a.get("old") or a.get("eski"),
+                    "new": a.get("new") or a.get("yeni") or "",
+                    "count": a.get("count") or 1,
+                    "regex": a.get("regex")}]
+    if not bloklar:
+        return {"ok": False, "error": "blocks gerekli: [{old,new}, ...]"}
+    ok, why = check_write(str(yol))
+    if not ok:
+        return {"ok": False, "error": why}
+    r = D.blok_duzenle(str(yol), bloklar, _kokler(False))
+    audit("edit_block", str(yol)[:150], r.get("ok", False))
+    return r
+
+
+def t_link_check(a):
+    D = _dosya_mod()
+    if not D:
+        return {"ok": False, "error": "dosya motoru bulunamadı."}
+    yol = str(a.get("path") or a.get("yol") or "")
+    if not yol:
+        return {"ok": False, "error": "path gerekli."}
+    r = D.link_durumu(yol, _kokler(True))
+    r["ok"] = True
+    return r
+
+
+# ============================================================================
+#  v6-DEV · ARAMA MOTORU — araç gövdeleri (Faz 2)
+# ============================================================================
+def _arama_mod():
+    try:
+        import arama
+        return arama
+    except Exception:
+        return None
+
+
+def t_start_search(a):
+    A = _arama_mod()
+    if not A:
+        return {"ok": False, "error": "arama motoru (arama.py) bulunamadı."}
+    desen = a.get("pattern") or a.get("desen") or a.get("query") or ""
+    kok = a.get("path") or a.get("cwd") or HOME
+    tur = a.get("mode") or a.get("tur") or ""
+    if not tur:
+        # desen dosya adı gibi görünüyorsa isim, değilse içerik
+        tur = "isim" if any(z in str(desen) for z in ("*", "?", ".")) and " " not in str(desen) else "icerik"
+    r = A.basla(kok, tur, desen, {"max": a.get("max"), "ignore_case": a.get("ignore_case", True)})
+    if r.get("ok"):
+        audit("start_search", "%s @ %s" % (str(desen)[:60], kok), True)
+    return r
+
+
+def t_get_more(a):
+    A = _arama_mod()
+    if not A:
+        return {"ok": False, "error": "arama motoru bulunamadı."}
+    aid = str(a.get("search_id") or a.get("arama_id") or "")
+    if not aid:
+        return {"ok": False, "error": "search_id gerekli.",
+                "aramalar": (A.liste().get("aramalar") or [])[-5:]}
+    return A.sonuclar(aid, int(a.get("start") or 1),
+                      int(a.get("count") or 50),
+                      bekle_s=float(a.get("wait_s") or 0))
+
+
+def t_stop_search(a):
+    A = _arama_mod()
+    if not A:
+        return {"ok": False, "error": "arama motoru bulunamadı."}
+    aid = str(a.get("search_id") or a.get("arama_id") or "")
+    if aid in ("", "hepsi", "all"):
+        maddeler = A.liste().get("aramalar") or []
+        sonuc = [A.durdur(x["arama_id"]) for x in maddeler
+                 if x["durum"] == "calisiyor"]
+        return {"ok": True, "durdurulan": len(sonuc), "detay": sonuc}
+    return A.durdur(aid)
+
+
+def t_list_searches(_a=None):
+    A = _arama_mod()
+    if not A:
+        return {"ok": False, "error": "arama motoru bulunamadı."}
+    return A.liste()
+
+
+# ============================================================================
+#  v6-DEV · TERMİNAL & PROCESS ENGINE — araç gövdeleri (Faz 1)
+# ============================================================================
+def _oturum_mod():
+    try:
+        import oturum
+        return oturum
+    except Exception:
+        return None
+
+
+def t_start_process(a):
+    """Kalıcı bir süreç oturumu başlat."""
+    O = _oturum_mod()
+    if not O:
+        return {"ok": False, "error": "oturum motoru (oturum.py) bulunamadı."}
+    komut = str(a.get("command") or "").strip()
+    if not komut:
+        return {"ok": False, "error": "command gerekli."}
+    ok, why = check_command(komut)
+    if not ok:
+        return {"ok": False, "error": why}
+    cwd = a.get("cwd") or HOME
+    ok, why = check_read(cwd)
+    if not ok:
+        return {"ok": False, "error": why}
+    r = O.basla(komut, cwd=_real(cwd), timeout=a.get("timeout"),
+                etiket=a.get("label") or a.get("etiket") or "")
+    if r.get("ok"):
+        audit("start_process", komut[:200], True)
+    else:
+        audit("start_process", komut[:200], False)
+    return r
+
+
+def t_read_process_output(a):
+    """Canlı çıktı oku (sequence tabanlı sayfalama)."""
+    O = _oturum_mod()
+    if not O:
+        return {"ok": False, "error": "oturum motoru bulunamadı."}
+    sid = str(a.get("session_id") or a.get("job_id") or "")
+    if not sid:
+        return {"ok": False, "error": "session_id gerekli.",
+                "acik_oturumlar": O.liste(sadece_canli=True).get("oturumlar", [])}
+    return O.oku(sid, akis=a.get("stream") or "out",
+                 baslangic=int(a.get("start") or 0),
+                 adet=int(a.get("count") or 200),
+                 bekle_s=float(a.get("wait_s") or 0))
+
+
+def t_interact_process(a):
+    """Sürece gerçek stdin gönder, cevabı döndür."""
+    O = _oturum_mod()
+    if not O:
+        return {"ok": False, "error": "oturum motoru bulunamadı."}
+    sid = str(a.get("session_id") or a.get("job_id") or "")
+    if not sid:
+        return {"ok": False, "error": "session_id gerekli."}
+    if "input" not in a and "metin" not in a:
+        return {"ok": False, "error": "input gerekli (gönderilecek metin)."}
+    r = O.yaz(sid, a.get("input", a.get("metin", "")),
+              satir_sonu=bool(a.get("newline", True)),
+              bekle_s=float(a.get("wait_s", 0.8)))
+    audit("interact", "%s ← %s" % (sid, str(a.get("input"))[:60]), r.get("ok", False))
+    return r
+
+
+def t_list_sessions(a):
+    O = _oturum_mod()
+    if not O:
+        return {"ok": False, "error": "oturum motoru bulunamadı."}
+    r = O.liste(sadece_canli=bool(a.get("live_only")))
+    r["istatistik"] = O.istatistik()
+    return r
+
+
+def t_terminate_session(a):
+    O = _oturum_mod()
+    if not O:
+        return {"ok": False, "error": "oturum motoru bulunamadı."}
+    sid = str(a.get("session_id") or a.get("job_id") or "")
+    if not sid:
+        return {"ok": False, "error": "session_id gerekli."}
+    r = O.bitir(sid)
+    audit("terminate_session", sid, r.get("ok", False))
+    return r
+
+
+def t_kill_process(a):
+    O = _oturum_mod()
+    if not O:
+        return {"ok": False, "error": "oturum motoru bulunamadı."}
+    try:
+        pid = int(a.get("pid") or 0)
+    except Exception:
+        return {"ok": False, "error": "Geçersiz pid."}
+    if pid <= 0:
+        return {"ok": False, "error": "pid gerekli (pozitif tam sayı)."}
+    r = O.pid_ile_oldur(pid, agac=bool(a.get("tree", True)))
+    audit("kill_process", "pid %d" % pid, r.get("ok", False))
+    return r
+
+
+# ============================================================================
+#  v6-DEV · TERMİNAL & PROCESS ENGINE (Faz 1)
+#  İngilizce kanonik isimler + Türkçe/eski adlar alias olarak korunur.
+# ============================================================================
+TOOLS.update({
+    "start_process": (t_start_process,
+        "[NEX] Uzun süre çalışan bir süreç/terminal oturumu başlatır. "
+        "Gerçek stdin, canlı stdout/stderr, kalıcı session_id. "
+        "REPL, SSH, PowerShell, bash, dev sunucusu — hepsi için.",
+        {"command": {"type": "string", "description": "Çalıştırılacak komut"},
+         "cwd": {"type": "string", "description": "Çalışma dizini"},
+         "timeout": {"type": "integer", "description": "Saniye (varsayılan 3600, üst 86400)"},
+         "label": {"type": "string", "description": "İnsan okur etiket"}},
+        ["command"]),
+    "read_process_output": (t_read_process_output,
+        "[NEX] Bir oturumun CANLI çıktısını okur (iş bitmeden de). "
+        "sequence tabanlı sayfalama: sonraki_baslangic değerini bir sonraki çağrıya verin.",
+        {"session_id": {"type": "string"},
+         "stream": {"type": "string", "description": "out | err | hepsi"},
+         "start": {"type": "integer", "description": "Bu sıra numarasından itibaren"},
+         "count": {"type": "integer", "description": "En fazla satır (varsayılan 200)"},
+         "wait_s": {"type": "number", "description": "Çıktı gelmezse bu kadar bekle"}},
+        ["session_id"]),
+    "interact_with_process": (t_interact_process,
+        "[NEX] Çalışan bir sürece GERÇEK klavye girdisi gönderir ve cevabı döndürür. "
+        "REPL komutu, parola/onay sorusu, SSH oturumu — hepsi.",
+        {"session_id": {"type": "string"},
+         "input": {"type": "string", "description": "Gönderilecek metin"},
+         "newline": {"type": "boolean", "description": "Sonuna satır sonu eklensin (varsayılan true)"},
+         "wait_s": {"type": "number", "description": "Cevap için beklenecek süre"}},
+        ["session_id", "input"]),
+    "list_sessions": (t_list_sessions,
+        "[NEX] Açık/kapanmış tüm terminal oturumlarını listeler "
+        "(session_id, pid, cwd, durum, exit_code, satır sayısı).",
+        {"live_only": {"type": "boolean", "description": "Yalnız çalışanlar"}}),
+    "terminate_session": (t_terminate_session,
+        "[NEX] Oturumu kapatır: çalışıyorsa süreç ağacını öldürür, kaydı siler.",
+        {"session_id": {"type": "string"}}, ["session_id"]),
+    "kill_process": (t_kill_process,
+        "[NEX] PID ile süreç öldürür (süreç ağacı dahil). Oturum dışı süreçler için.",
+        {"pid": {"type": "integer"},
+         "tree": {"type": "boolean", "description": "Çocuk süreçleri de öldür (varsayılan true)"}},
+        ["pid"]),
+})
+
+TOOLS.update({
+    "start_search": (t_start_search,
+        "[NEX] Dosya adı veya dosya içeriği aramasını ARKA PLANDA başlatır "
+        "(istek bloklanmaz). Sonuçlar sayfa sayfa okunur; kırpma açıkça bildirilir.",
+        {"pattern": {"type": "string", "description": "Desen: '*.py' veya 'TODO' veya düzenli ifade"},
+         "path": {"type": "string", "description": "Aranacak klasör"},
+         "mode": {"type": "string", "description": "isim | icerik | ikisi"},
+         "max": {"type": "integer", "description": "En fazla sonuç (varsayılan 20000)"},
+         "ignore_case": {"type": "boolean"}},
+        ["pattern"]),
+    "get_more_search_results": (t_get_more,
+        "[NEX] Bir aramanın sonuçlarını sayfa sayfa verir. "
+        "Önceki çağrının sonraki_baslangic değerini 'start' olarak verin.",
+        {"search_id": {"type": "string"},
+         "start": {"type": "integer", "description": "Bu sıra numarasından itibaren (1 tabanlı)"},
+         "count": {"type": "integer", "description": "Sayfa boyu (varsayılan 50)"},
+         "wait_s": {"type": "number", "description": "Sonuç gelmezse bekle"}},
+        ["search_id"]),
+    "stop_search": (t_stop_search,
+        "[NEX] Çalışan aramayı durdurur (search_id yoksa hepsini).",
+        {"search_id": {"type": "string"}}),
+    "list_searches": (t_list_searches,
+        "[NEX] Tüm aramaları durumlarıyla listeler (çalışıyor/bitti/kırpıldı).",
+        {}),
+})
+
+TOOLS.update({
+    "read_multiple_files": (t_read_multiple,
+        "[NEX] TEK çağrıda birden çok dosya okur (en fazla 50). "
+        "Her dosya için ayrı sonuç; okunamayanların sebebi yazılır.",
+        {"paths": {"type": "array", "items": {"type": "string"},
+                   "description": "Dosya yolları"}},
+        ["paths"]),
+    "edit_block": (t_edit_block,
+        "[NEX] Birden çok metin bloğunu TEK geçişte, ATOMİK değiştirir. "
+        "Bloklardan biri eşleşmezse HİÇBİR ŞEY yazılmaz (yarım dosya olmaz).",
+        {"path": {"type": "string"},
+         "blocks": {"type": "array", "description": "[{old,new,count,regex}, ...]",
+                    "items": {"type": "object"}},
+         "old": {"type": "string", "description": "Tek blok kısayolu"},
+         "new": {"type": "string"},
+         "count": {"type": "integer"},
+         "regex": {"type": "boolean"}},
+        ["path"]),
+    "link_check": (t_link_check,
+        "[NEX] Bir yolun symlink/junction/hardlink olup olmadığını ve hedefinin "
+        "izinli kökün içinde kalıp kalmadığını denetler.",
+        {"path": {"type": "string"}}, ["path"]),
+})
+
+TOOLS.update({
+    "get_window_info": (t_get_window_info,
+        "[NEX] Bir pencerenin ayrıntısı: başlık, dikdörtgen, PID, süreç adı, "
+        "sınıf, alt pencere sayısı, sanal makine penceresi mi.",
+        {"title": {"type": "string", "description": "Başlıkta geçen parça"},
+         "id": {"type": "integer"}}, []),
+    "find_ui_element": (t_find_ui_element,
+        "[NEX] Ekranda bir düğme/metin alanını adından bulur (koordinat gerekmez). "
+        "Bulamazsa TAHMİN ETMEZ, açıkça bildirir.",
+        {"text": {"type": "string", "description": "Öğenin yazısı (ör. 'Kaydet')"},
+         "window": {"type": "string", "description": "Pencere başlığı (isteğe bağlı)"}},
+        ["text"]),
+    "interact_with_ui_element": (t_interact_ui,
+        "[NEX] Öğeyi bulup üzerinde işlem yapar ve SONUCU DOĞRULAR: "
+        "click / double_click / right_click / read / set / invoke / focus.",
+        {"text": {"type": "string"},
+         "action": {"type": "string", "description": "click | double_click | right_click | read | set | invoke | focus"},
+         "value": {"type": "string", "description": "set için yazılacak metin"},
+         "window": {"type": "string"},
+         "verify": {"type": "boolean", "description": "Tıklama sonrası ekran değişti mi kontrol et (varsayılan true)"}},
+        ["text"]),
+    "vm_coordinates": (t_vm_koordinat,
+        "[NEX] Sanal makine (VMConnect/Hyper-V/VMware) penceresi için koordinat "
+        "dönüşümü: misafir ekranı ↔ host ekranı (ölçek, ortalama, kaydırma).",
+        {"direction": {"type": "string", "description": "guest_to_host | host_to_guest"},
+         "x": {"type": "integer"}, "y": {"type": "integer"},
+         "window": {"type": "string", "description": "VM penceresi başlığı"},
+         "client": {"type": "array", "description": "[x,y,w,h] misafir ekran alanı"},
+         "guest_width": {"type": "integer"}, "guest_height": {"type": "integer"},
+         "scale": {"type": "number"}, "scroll": {"type": "array"}},
+        ["x", "y"]),
+})
+
+TOOLS.update({
+    "get_recent_tool_calls": (t_recent_calls,
+        "[NEX] Son araç çağrılarını yapılandırılmış olarak verir "
+        "(tool, cihaz, oturum, süre, sonuç). Gizli bilgiler maskelenmiştir.",
+        {"count": {"type": "integer"},
+         "tool": {"type": "string", "description": "Yalnız bu araç"},
+         "errors_only": {"type": "boolean"},
+         "device_id": {"type": "string"}}),
+    "get_usage_stats": (t_usage_stats,
+        "[NEX] Kullanım istatistiği: çağrı sayısı, hata oranı, ortalama süre, "
+        "en çok kullanılan araçlar.",
+        {"period": {"type": "string", "description": "saat | gun | hafta | ay | hepsi"}}),
+    "get_audit_log": (t_audit_log,
+        "[NEX] Ham denetim kaydı (maskeli, filtrelenebilir) — her işlem izlenebilir.",
+        {"count": {"type": "integer"}, "tool": {"type": "string"},
+         "errors_only": {"type": "boolean"}, "search": {"type": "string"}}),
+    "nex_hud": (t_hud,
+        "[NEX] Canlı HUD: hedef cihaz, aktif pencere, son işlem ve sonucu. "
+        "Parametresiz çağrılırsa mevcut durumu okur.",
+        {"action": {"type": "string"}, "window": {"type": "string"},
+         "result": {"type": "string"}, "device_id": {"type": "string"}}),
+    "mask_test": (t_mask_test,
+        "[NEX] Gizli bilgi maskelemesinin kendi kendini testi (sızıntı var mı).",
+        {}),
+})
+
+TOOLS.update({
+    "list_devices": (t_list_devices,
+        "[NEX] Kayıtlı cihazları durumlarıyla listeler (online/offline). "
+        "Yerel cihaz daima 'local' olarak kullanılabilir.",
+        {}),
+    "add_device": (t_add_device,
+        "[NEX] Yeni cihaz kaydeder (Windows Host / Ubuntu AI-Workstation). "
+        "Üretilen anahtar KARŞI cihaza verilir; imzalı bağlantı kurulur.",
+        {"device_id": {"type": "string", "description": "Benzersiz kimlik (ör. ubuntu-ai)"},
+         "url": {"type": "string", "description": "http(s)://host:port"},
+         "name": {"type": "string"},
+         "key": {"type": "string", "description": "Ortak anahtar (boşsa üretilir)"},
+         "allow_tools": {"type": "array", "items": {"type": "string"},
+                         "description": "Uzaktan çağrılabilir araçlar"},
+         "platform": {"type": "string"}, "tags": {"type": "array"}},
+        ["device_id", "url"]),
+    "remove_device": (t_remove_device,
+        "[NEX] Cihazı kayıttan siler.",
+        {"device_id": {"type": "string"}}, ["device_id"]),
+    "device_health": (t_health,
+        "[NEX] Cihaz sağlık kontrolü (gecikme dahil). device_id yoksa hepsi.",
+        {"device_id": {"type": "string"}}),
+    "device_call": (t_device_call,
+        "[NEX] Bir aracı BAŞKA CİHAZDA çalıştırır (imzalı istek). "
+        "device_id='local' ise yerel çalışır.",
+        {"device_id": {"type": "string"}, "tool": {"type": "string"},
+         "args": {"type": "object"}, "timeout": {"type": "integer"}},
+        ["tool"]),
+})
+
+TOOLS.update({
+    "check_action": (t_check_action,
+        "[NEX] İşlem YAPMADAN önce izin kontrolü: kademe (1 okuma / 2 yazma / "
+        "3 tehlikeli), sandbox durumu, onay gerekip gerekmediği.",
+        {"tool": {"type": "string"}, "args": {"type": "object"},
+         "command": {"type": "string", "description": "Kabuk komutu kısayolu"}},
+        ["tool"]),
+    "approve_action": (t_approve,
+        "[NEX] KADEME 3 işlem için tek kullanımlık onay belirteci üretir. "
+        "Belirteç o araç+parametreye bağlıdır, 120 sn geçerlidir, tek kullanımlıktır.",
+        {"tool": {"type": "string"}, "args": {"type": "object"},
+         "note": {"type": "string", "description": "Ne onaylandığı"}},
+        ["tool"]),
+    "list_approvals": (t_list_approvals,
+        "[NEX] Bekleyen (kullanılmamış) onayları listeler.", {}),
+    "policy_test": (t_policy_test,
+        "[NEX] İzin politikasının kendini testi: atlatma denemeleri "
+        "(parametreyle onay, sahte belirteç, sandbox kaçışı, tek kullanım).", {}),
+})
+
+# ---- ALIAS: eski/Türkçe adlar aynı işlevi gösterir (geriye dönük uyumluluk)
+ALIAS = {
+    "surec_baslat": "start_process",
+    "surec_oku": "read_process_output",
+    "surec_yaz": "interact_with_process",
+    "oturumlar": "list_sessions",
+    "oturum_kapat": "terminate_session",
+    # eski adlar → yeni motor (job_* yerine kalıcı oturum)
+    "job_start": "start_process",
+    "job_output": "read_process_output",
+    "job_kill": "terminate_session",
+    "job_status": "read_process_output",
+    "arama_baslat": "start_search",
+    "arama_sonuc": "get_more_search_results",
+    "arama_durdur": "stop_search",
+    "aramalar": "list_searches",
+    "coklu_oku": "read_multiple_files",
+    "blok_duzenle": "edit_block",
+    "link_kontrol": "link_check",
+    "pencere_bilgi": "get_window_info",
+    "oge_bul": "find_ui_element",
+    "oge_etkiles": "interact_with_ui_element",
+    "vm_koordinat": "vm_coordinates",
+    "son_cagrilar": "get_recent_tool_calls",
+    "kullanim_istatistigi": "get_usage_stats",
+    "denetim_kaydi": "get_audit_log",
+    "hud_durum": "nex_hud",
+    "cihazlar": "list_devices",
+    "cihaz_ekle": "add_device",
+    "cihaz_cikar": "remove_device",
+    "cihaz_saglik": "device_health",
+    "cihaz_cagri": "device_call",
+    "izin_kontrol": "check_action",
+    "onayla": "approve_action",
+    "bekleyen_onaylar": "list_approvals",
+    "politika_testi": "policy_test",
+}
+
 TOOL_ORDER = list(TOOLS.keys())
 
 
@@ -1573,6 +2321,11 @@ YAZAN_ARACLAR = {
 
 
 def call_tool(name, args):
+    # ALIAS: eski/Türkçe ad → kanonik İngilizce ad (geriye dönük uyumluluk)
+    if name not in TOOLS and name in ALIAS:
+        hedef = ALIAS[name]
+        if hedef in TOOLS:
+            name = hedef
     if name not in TOOLS:
         return {"ok": False, "error": f"Bilinmeyen araç: {name}"}
     if _onay_gerekli(name) and not args.get("_onaylandi"):
@@ -1597,12 +2350,47 @@ def call_tool(name, args):
         return {"ok": False, "read_only": True,
                 "error": f"SALT OKUNUR MOD açık — '{name}' değişiklik yapar, reddedildi.",
                 "hint": "Kapatmak için: python kur.py mod yazma"}
+    # ---- Faz 7: İZİN POLİTİKASI KAPISI (atlatılamaz, araç içinden kapatılamaz)
+    _gv = _guvenlik()
+    if _gv and name not in ("check_action", "approve_action", "list_approvals",
+                            "policy_test", "status", "nex_hud",
+                            "get_recent_tool_calls", "get_usage_stats",
+                            "get_audit_log", "mask_test", "list_devices",
+                            "device_health",
+                            # link_check VARSAYILAN OLARAK sandbox dışını
+                            # DENETLEMEK zorundadır — engellenirse saldırıyı
+                            # bildiremez. Yalnız durum raporlar, içerik okumaz.
+                            "link_check"):
+        try:
+            _k = _gv.karar(name, args or {}, _kokler(False),
+                           okuma_kokleri=_kokler(True),
+                           kademe_limiti=int(CFG.get("kademe_limiti") or 3),
+                           onay_id=(args or {}).get("approval_id"),
+                           mod=str(CFG.get("mod") or "normal"))
+            if not _k.get("izin"):
+                audit("policy_block", "%s (kademe %s)" % (name, _k.get("kademe")), False)
+                return {"ok": False, "blocked": True, "policy": _k,
+                        "error": _k.get("sebep"),
+                        "nasil": _k.get("nasil", "")}
+        except Exception:
+            pass
     fn = TOOLS[name][0]
+    _t0 = time.time()
     try:
         r = fn(args or {})
         if not isinstance(r, dict):
             r = {"ok": True, "result": r}
         audit("tool", name, r.get("ok", True))
+        # --- Faz 5: yapılandırılmış denetim + canlı HUD (gizli bilgi maskeli)
+        try:
+            _iz = _izleme()
+            if _iz:
+                _iz.yaz(name, r.get("ok", True), args or {}, r,
+                        hata=str(r.get("error") or ""),
+                        sure_ms=(time.time() - _t0) * 1000)
+                _iz.hud_otomatik(name, r.get("ok", True), args or {}, r)
+        except Exception:
+            pass
         # zaman aşımı sayılmaz → sayaç geri alınır (adil kota)
         if isinstance(r, dict) and r.get("timeout"):
             _kota_geri_al()
@@ -1613,6 +2401,13 @@ def call_tool(name, args):
         return {"ok": False, "timeout": True, "error": f"Zaman aşımı: {e}"}
     except Exception as e:
         audit("tool_error", f"{name}: {e}", False)
+        try:
+            _iz = _izleme()
+            if _iz:
+                _iz.yaz(name, False, args or {}, None, hata=str(e),
+                        sure_ms=(time.time() - _t0) * 1000)
+        except Exception:
+            pass
         return {"ok": False, "error": f"{type(e).__name__}: {e}"}
 
 
@@ -1896,6 +2691,34 @@ def _kota_yaz(d):
 
 def _kayit_butunluk(ay, kullanilan, toplam):
     return hashlib.sha256(f"{KOTA_TUZU}|{ay}|{kullanilan}|{toplam}".encode()).hexdigest()[:32]
+
+
+def _kota_izlerini_guncelle(d):
+    """Sayaç izlerini (defter/damga/mühür) güncelle.
+
+    SINIRSIZ MODDA DA çağrılır: aksi hâlde mod kapatıldığında izler geride
+    kaldığı için dürüst kullanıcı 'kurcalandı' alarmıyla karşılaşıyordu.
+    """
+    try:
+        k = _kayit_oku()
+        toplam = int(k.get("toplam") or 0) + 1 if k.get("ay") == d.get("ay") else 1
+        _kayit_yaz({"ay": d.get("ay"), "kullanilan": int(d.get("kullanilan") or 0),
+                    "toplam": toplam,
+                    "_b": _kayit_butunluk(d.get("ay"), int(d.get("kullanilan") or 0),
+                                          toplam),
+                    "_makine": makine_kimligi()})
+    except Exception:
+        pass
+    try:
+        _muhur_yaz(d)
+    except Exception:
+        pass
+    try:
+        with open(KOTA_AUDIT_ISARET, "w", encoding="utf-8") as f:
+            json.dump({"ay": d.get("ay"), "kullanilan": d.get("kullanilan"),
+                       "son": d.get("son")}, f)
+    except Exception:
+        pass
 
 
 def _kayit_oku():
@@ -2196,7 +3019,9 @@ def kota_durum():
                           if yuzde >= 80 and kull < KOTA_UCRETSIZ else
                           "Aylık ücretsiz sınır doldu." if kull >= KOTA_UCRETSIZ else "")),
         "sifirlanma": "Her ayın 1'inde 00:00 UTC",
-        "pro": bool(d.get("pro")), "sinirsiz": bool(d.get("pro")),
+        "pro": bool(d.get("pro")),
+        "sinirsiz": bool(d.get("pro") or CFG.get("kota_sinirsiz")),
+        "sinirsiz_mod": bool(CFG.get("kota_sinirsiz")),
         "fiyat": KOTA_FIYAT, "bagis": BAGIS_URL,
         "lisans": d.get("lisans") or "",
         "lisans_bilgi": (lambda b: {
@@ -2223,10 +3048,19 @@ def kota_say():
     global _KOTA_ONBELLEK
     with KOTA_KILIT:
         d = _kota_yukle()
+        # SINIRSIZ MOD: sayaç yine tutulur (istatistik için) ama sınır YOK.
+        if CFG.get("kota_sinirsiz"):
+            d["kullanilan"] = d.get("kullanilan", 0) + 1
+            d["sinirsiz"] = True
+            d["son"] = time.time()
+            _kota_yaz(d)
+            _kota_izlerini_guncelle(d)     # izler geride kalmasın
+            return True
         if d.get("pro"):
             d["kullanilan"] = d.get("kullanilan", 0) + 1
             d["son"] = time.time()
             _kota_yaz(d)
+            _kota_izlerini_guncelle(d)
             return True
         if d.get("kullanilan", 0) >= KOTA_UCRETSIZ or d.get("kurcalandi"):
             return False
@@ -2818,6 +3652,29 @@ th{color:var(--soluk);font-weight:600;font-size:12px}
   </div>
 </div>
 
+<div class="bolum">
+  <h2>🛰️ NEX · canlı durum</h2>
+  <div style="background:var(--kart);border:1px solid var(--cizgi);border-radius:14px;padding:14px 16px">
+    <div style="display:flex;flex-wrap:wrap;gap:10px 22px;font-size:13px">
+      <div><span class="alt">Cihaz</span><div id="nexCihaz" style="font-weight:600">local</div></div>
+      <div><span class="alt">İşlem</span><div id="nexIslem" style="font-weight:600">—</div></div>
+      <div><span class="alt">Sonuç</span><div id="nexSonuc" style="font-weight:600">—</div></div>
+      <div><span class="alt">Pencere</span><div id="nexPencere" style="font-weight:600">—</div></div>
+      <div><span class="alt">Güncelleme</span><div id="nexSaati" style="font-weight:600">—</div></div>
+    </div>
+  </div>
+  <div class="izgara" style="margin-top:12px">
+    <div class="kart"><div class="b">Terminal oturumu</div><div class="d" id="nexOturum">0</div>
+      <div class="alt" style="font-size:12px" id="nexOturumAlt"></div></div>
+    <div class="kart"><div class="b">Arama</div><div class="d" id="nexArama">0</div></div>
+    <div class="kart"><div class="b">Cihaz (online)</div><div class="d" id="nexCihazSayi">0</div></div>
+    <div class="kart"><div class="b">Bugünkü çağrı</div><div class="d" id="nexCagri">0</div>
+      <div class="alt" style="font-size:12px" id="nexCagriAlt"></div></div>
+  </div>
+  <div style="background:var(--kart);border:1px solid var(--cizgi);border-radius:14px;
+       padding:12px 14px;margin-top:12px;font-size:12.5px" id="nexYetenek"></div>
+</div>
+
 <div class="bolum" id="onayBolum" style="display:none">
   <h2>⚠️ Onay bekleyen işlemler</h2>
   <div id="onayListe"></div>
@@ -2957,6 +3814,41 @@ async function yukle(){
     const aj=document.getElementById('ajan');
     aj.textContent = (d.agent_visible && d.agent_visible.ready) ? 'açık' : 'kapalı';
     aj.className='d '+((d.agent_visible && d.agent_visible.ready)?'ok':'uy');
+    // ---- NEX canlı katmanı
+    try{
+      const n = d.nex || {};
+      const hud = n.hud || {};
+      const gt = (id,v)=>{const e=document.getElementById(id); if(e) e.textContent = v;};
+      gt('nexCihaz', hud.device || 'local');
+      gt('nexIslem', hud.action || '—');
+      gt('nexSonuc', hud.result || '—');
+      gt('nexPencere', hud.window || '—');
+      gt('nexSaati', hud.t || '—');
+      const ss = n.sessions || {};
+      gt('nexOturum', ss.canli + ' / ' + ss.sayi);
+      gt('nexOturumAlt', ss.yazilabilir + ' tanesi yazılabilir');
+      const ar = n.searches || {};
+      gt('nexArama', ar.calisan ? (ar.calisan + ' çalışıyor') : (ar.sayi + ' toplam'));
+      const dv = n.devices || {};
+      gt('nexCihazSayi', dv.online + ' / ' + dv.sayi);
+      const us = n.usage || {};
+      gt('nexCagri', (us.cagri||0));
+      gt('nexCagriAlt', 'hata ' + (us.hata||0) + ' · ort ' + (us.ortalama_ms||0) + ' ms');
+      const y = (n.modules && n.modules.yetenekler) || {};
+      const sec = n.security || {};
+      const parc = [];
+      parc.push('Kademe sınırı: ' + (sec.kademe_limiti||3) + ' · mod: ' + (sec.mod||'normal'));
+      parc.push('Bekleyen onay: ' + (sec.bekleyen_onay||0));
+      parc.push('PTY kalıcı yazma: ' + (y.pty_kalici_yazma?'açık':'kapalı'));
+      parc.push('Nesne ağacı: ' + (y.nesne_agaci||'?'));
+      parc.push('Sanal imleç: ' + (y.sanal_imlec?'var':'yok'));
+      if((n.modules && n.modules.eksik || []).length)
+        parc.push('⚠️ Eksik modül: ' + n.modules.eksik.join(', '));
+      const q = n.quota || {};
+      parc.push('Plan: ' + (q.sinirsiz_mod ? 'SINIRSIZ' : (q.pro ? 'PRO' : 'ÜCRETSİZ')));
+      const ey = document.getElementById('nexYetenek');
+      if(ey) ey.textContent = parc.join('  ·  ');
+    }catch(e){}
     document.getElementById('klasorler').innerHTML =
       '<tr><th>Tür</th><th>Klasör</th></tr>' +
       d.read_roots.map(x=>'<tr><td>okuma</td><td><code>'+x+'</code></td></tr>').join('') +
@@ -3189,7 +4081,86 @@ def panel_payload():
         "audit": _audit_tail(),
         "ai_kapali": bool(CFG.get("ai_kapali")),
         "stopped": os.path.exists(os.path.join(CFG_DIR, "stopped")),
+        # ---- v6-DEV · NEX canlı katmanı (Faz 1-7)
+        "nex": _nex_payload(),
     }
+
+
+def _nex_payload():
+    """Paneli besleyen canlı NEX verisi. Her alt sistem kendi hatasını
+    yutar; panel ASLA çökmez (tek bozuk modül tüm paneli düşürmemeli)."""
+    d = {}
+    # HUD
+    try:
+        import izleme
+        d["hud"] = izleme.hud_oku().get("hud") or {}
+    except Exception:
+        d["hud"] = {}
+    # oturumlar
+    try:
+        import oturum
+        ot = oturum.liste()
+        d["sessions"] = {"sayi": ot.get("sayi", 0),
+                         "canli": sum(1 for z in (ot.get("oturumlar") or [])
+                                      if z.get("durum") == "running"),
+                         "yazilabilir": sum(1 for z in (ot.get("oturumlar") or [])
+                                            if z.get("yazilabilir")),
+                         "liste": (ot.get("oturumlar") or [])[:6]}
+    except Exception:
+        d["sessions"] = {"sayi": 0, "canli": 0, "liste": []}
+    # aramalar
+    try:
+        import arama
+        ar = arama.liste()
+        d["searches"] = {"sayi": ar.get("sayi", 0),
+                         "calisan": sum(1 for z in (ar.get("aramalar") or [])
+                                        if z.get("durum") == "calisiyor"),
+                         "kirpilan": sum(1 for z in (ar.get("aramalar") or [])
+                                         if z.get("kirpildi"))}
+    except Exception:
+        d["searches"] = {"sayi": 0, "calisan": 0}
+    # cihazlar
+    try:
+        import cihaz
+        cl = cihaz.cihaz_listesi()
+        d["devices"] = {"sayi": cl.get("sayi", 0),
+                        "online": sum(1 for z in (cl.get("cihazlar") or [])
+                                      if z.get("durum") == "online"),
+                        "liste": cl.get("cihazlar") or []}
+    except Exception:
+        d["devices"] = {"sayi": 0, "online": 0, "liste": []}
+    # kullanım
+    try:
+        import izleme
+        u = izleme.kullanim("gun")
+        d["usage"] = {"cagri": u.get("toplam_cagri", 0),
+                      "hata": u.get("hata", 0),
+                      "ortalama_ms": u.get("ortalama_ms", 0),
+                      "en_cok": (u.get("en_cok_kullanilan") or [])[:5]}
+    except Exception:
+        d["usage"] = {}
+    # güvenlik
+    try:
+        import guvenlik
+        d["security"] = {"kademe_limiti": CFG.get("kademe_limiti") or 3,
+                         "mod": CFG.get("mod") or "normal",
+                         "bekleyen_onay": len(guvenlik.onay_listesi().get("bekleyen") or [])}
+    except Exception:
+        d["security"] = {}
+    # modüller / yetenekler
+    try:
+        import moduller
+        b = moduller.surum_bilgi()
+        d["modules"] = {"eksik": b.get("eksik") or [],
+                        "yetenekler": b.get("yetenekler") or {}}
+    except Exception:
+        d["modules"] = {}
+    # kota
+    try:
+        d["quota"] = kota_durum()
+    except Exception:
+        d["quota"] = {}
+    return d
 
 
 # ============================================================================
@@ -4386,6 +5357,9 @@ def print_help():
   python ghostpilot.py relay      HTTPS köprü  → ChatGPT, Arena, tarayıcı AI
   python ghostpilot.py watchdog   Bekçi: relay çökerse yeniden başlatır (HEP açık)
   python ghostpilot.py tools      {len(TOOLS)} aracı listele
+  python ghostpilot.py sinirsiz   SINIRSIZ MOD (kota/lisans açık)
+  python ghostpilot.py kota-durum kullanım durumu
+  python ghostpilot.py surum      modül sürümleri
   python ghostpilot.py token      Yeni erişim anahtarı üret
   python ghostpilot.py where      Yapılandırma dosyalarının yerini göster
 
@@ -4516,6 +5490,50 @@ def main():
             except Exception:
                 pass
         run_relay(port, host)
+        return 0
+    if cmd in ("sinirsiz", "full", "tam"):
+        # ---- SINIRSIZ MOD (kota + lisans açık)
+        alt = (sys.argv[2].lower() if len(sys.argv) > 2 else "")
+        acik = alt not in ("kapat", "off", "0", "hayir")
+        CFG["kota_sinirsiz"] = acik
+        CFG["lisans_gerekli"] = not acik
+        _cfg_yaz_raw(CFG)
+        print()
+        if acik:
+            print("  ✅ SINIRSIZ MOD AÇIK")
+            print("     · Aylık 20.000 çağrı sınırı UYGULANMIYOR")
+            print("     · Destek anahtarı / lisans İSTENMİYOR")
+            print("     · Çağrılar yine sayılıyor (yalnız istatistik: kota_durumu)")
+        else:
+            print("  ℹ️  SINIRSIZ MOD KAPALI — ücretsiz plan geri yüklendi")
+            print("     · Aylık 20.000 çağrı, sınırsız için destek anahtarı")
+        print("     · Politikalar ve güvenlik kapıları DEĞİŞMEDİ (Faz 7 aynen geçerli)")
+        print("     · Değişiklik için sunucuyu yeniden başlatın.")
+        print()
+        return 0
+    if cmd in ("kota-durum", "kota_durumu", "quota"):
+        kd = kota_durum()
+        print()
+        print(f"  Plan      : {'SINIRSIZ' if kd.get('sinirsiz') else ('PRO' if kd.get('pro') else 'ÜCRETSİZ')}")
+        if kd.get("sinirsiz_mod"):
+            print("  Sınır     : YOK (kota_sinirsiz açık)")
+        else:
+            print(f"  Bu ay     : {kd['kullanilan']:,} / {kd['limit']:,}".replace(",", "."))
+            print(f"  Kalan     : {kd['kalan']:,}".replace(",", "."))
+        print(f"  Sıfırlanma: {kd.get('sifirlanma')}")
+        print()
+        return 0
+    if cmd in ("surum", "version", "--version", "-v"):
+        try:
+            import moduller
+            m = moduller.surum_bilgi()
+        except Exception:
+            m = {"surum": VERSION, "moduller": {}}
+        print(f"\n  GhostPilot {VERSION}  ·  {len(TOOLS)} araç  ·  "
+              f"{len(ALIAS)} alias  ·  {OS_NAME}\n")
+        for ad, bilgi in (m.get("moduller") or {}).items():
+            print(f"   • {ad:12s} {bilgi}")
+        print()
         return 0
     if cmd == "tools":
         print(f"\n  {len(TOOLS)} araç:\n")
