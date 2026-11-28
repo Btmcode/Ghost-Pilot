@@ -14,8 +14,8 @@ ChatGPT **sizin bilgisayarınızdaki** bir programa doğrudan ulaşamaz. Arada b
 ChatGPT  ──internet──►  köprü (sizin adresiniz)  ──►  sizin bilgisayarınız
 ```
 
-Köprüyü kurmak için **Tailscale** adlı ücretsiz bir program kullanılır.
-Tek seferlik iş. Sonra ChatGPT her sohbette bilgisayarınıza erişebilir.
+Köprüyü kurmak için **hiçbir ek program gerekmez.** GhostPilot, bilgisayarınızda
+hazır bulunan `ssh` ile ücretsiz bir HTTPS adresi açar. Tek düğme, bir saniye.
 
 
 ---
@@ -29,7 +29,8 @@ Tek seferlik iş. Sonra ChatGPT her sohbette bilgisayarınıza erişebilir.
 ---|
 | GhostPilot kurulu olmalı | ✅ Evet | `KURULUM.bat` |
 | ChatGPT **Plus / Pro / Business** | ✅ Evet | Ücretsiz planda bu bölüm yok |
-| Tailscale hesabı | ✅ Evet | Ücretsiz, 1 dakikalık kayıt |
+| Ek program | ❌ Hayır | `ssh` zaten kurulu gelir |
+| Hesap / kayıt | ❌ Hayır | Hiçbiri |
 | İnternet | ✅ Evet | |
 
 
@@ -47,14 +48,21 @@ Tek seferlik iş. Sonra ChatGPT her sohbette bilgisayarınıza erişebilir.
 
 ---
 
-## Adım 2 — Tailscale'i kurun
+## Adım 2 — Tüneli açın (tek düğme)
 
-1. Tarayıcıda **tailscale.com/download** adresini açın.
-2. **Windows** seçeneğini indirin.
-3. İndirdiğiniz dosyaya **çift tıklayın** → **Install**.
-4. Kurulunca **Log in** → Google/Microsoft hesabıyla giriş yapın.
-5. Ekranın sağ alt köşesinde Tailscale simgesi görünür → hazır.
+1. Masaüstündeki **GhostPilot** simgesine çift tıklayın.
+2. Panelde **Bağlantıyı başlat** düğmesine basın.
+3. Üstte yeşil **● Bağlı** yazısı çıkana kadar bekleyin (5-10 saniye).
+4. Yeşil kutudaki adresi **Kopyala** düğmesiyle alın.
 
+Adres şöyle görünür:
+
+```
+https://abc123.free.pinggy.net/mcp?token=uzun-bir-anahtar
+```
+
+> Adres her açılışta değişebilir. Değişirse ChatGPT'deki kaydı güncellemeniz
+> gerekir — panelde **Kopyala**'ya basıp yeni adresi yapıştırın.
 
 ---
 
@@ -158,7 +166,7 @@ GhostPilot hiçbir veriyi kendi sunucusuna göndermez.
 
 ## Tünel istemiyorsanız — daha kolay yollar
 
-ChatGPT'ye eklemek **zorunlu değil**. Tailscale kurmak istemiyorsanız:
+ChatGPT'ye eklemek **zorunlu değil**. Tünel açmak istemiyorsanız:
 
 | Program | Komut | Tünel gerekir mi |
 |
@@ -178,7 +186,7 @@ GhostPilot'u doğrudan başlatıp kullanabilirsiniz.
 
 ## Not
 
-Bu tarif **Windows içindir**. Windows'a özel adımlar (Tailscale kurulumu,
+Bu tarif **Windows içindir**. Windows'a özel adımlar (tünel,
 kısayol, tepsi simgesi) bizim test ortamımızda birebir denenemedi —
 kod kontrol edildi, ama ilk kurulumda bir aksilik olursa `python kur.py hata`
 çıktısını bize iletin, aynı gün düzeltiriz.

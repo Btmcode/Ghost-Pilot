@@ -186,7 +186,7 @@ class Sihirbaz:
             ("●", "Sistem", f"{SISTEM} · {platform.machine()} · Python {platform.python_version()}"),
             ("●", t("adim_venv"), ".venv — " + ("izole kurulum" if SISTEM != "Windows" else "izole kurulum")),
             ("●", t("adim_paket"), "pip · Pillow"),
-            ("●", t("adim_tailscale"), "tailscale.com — " + ("ChatGPT için" )),
+            ("●", t("adim_tunel"), "ssh — ChatGPT için otomatik"),
             ("●", t("adim_kisayol"), "Masaüstü + menü"),
         ]
         for i, (simge, a, b) in enumerate(satirlar):
@@ -312,7 +312,7 @@ class Sihirbaz:
             self._yaz(f"        ✅ {self.py}\n")
 
             # 2) kur.py oto (gereksinimler + sunucu + kısayol)
-            self._yaz("  [2/5] " + t("adim_paket") + " · " + t("adim_tailscale") + "…\n")
+            self._yaz("  [2/5] " + t("adim_paket") + " · " + t("adim_tunel") + "…\n")
             env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1",
                        GP_UI="1")
             p = subprocess.Popen([self.py, os.path.join(BURASI, "setup.py")],
@@ -347,7 +347,7 @@ class Sihirbaz:
             except Exception:
                 pass
             self.adres = adres
-            self._yaz(f"        {adres or '(tailscale gerekli)'}\n")
+            self._yaz(f"        {adres or '(tünel için: python kur.py tunel)'}\n")
 
             # 5) bitti
             self._yaz("\n  [5/5] " + t("bitti_baslik") + "\n")
@@ -366,7 +366,7 @@ class Sihirbaz:
         self.kurulum_bitti = True
         self.temizle()
         self.baslik(t("bitti_baslik"), t("bitti_alt"))
-        adres = getattr(self, "adres", "") or "(tailscale gerekli)"
+        adres = getattr(self, "adres", "") or "(tünel için: python kur.py tunel)"
         kart = tk.Frame(self.govde, bg=KART, highlightbackground=CIZGI, highlightthickness=1)
         kart.pack(fill="x", pady=(18, 0))
         ic = tk.Frame(kart, bg=KART)

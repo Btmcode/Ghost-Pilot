@@ -45,11 +45,11 @@ Dilediğiniz an silebilirsiniz.
 
 | Bağlantı | Neden |
 |---|---|
-| Bilgisayarınız ↔ sohbet programı | Araç çağrıları (Tailscale tüneli veya yerel ağ) |
+| Bilgisayarınız ↔ sohbet programı | Araç çağrıları (ücretsiz HTTPS tüneli veya yerel ağ) |
 | `api.github.com` | Yalnızca güncelleme kontrolü (istek sizce başlatılırsa) |
 | `api.telegram.org` | Yalnızca siz açtıysanız ve yalnızca **giden** bildirim |
 
-Tailscale tüneli kullanıldığında trafik uçtan uca şifrelenir. Sunucu adresinizi
+Tünel açıkken trafik uçtan uca şifrelenir. Sunucu adresinizi
 tahmin eden biri bile **OAuth onay ekranını geçemediği için** bağlanamaz.
 
 ## 4. Verilerin paylaşılması

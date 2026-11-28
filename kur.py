@@ -98,14 +98,12 @@ def py(args, capture=True):
 
 # ============================================================================
 #  GEREKSİNİMLER — eksikse KENDİSİ İNDİRİP KURAR
-#  Python · pip · Pillow · Tailscale
+#  Python · pip · Pillow
 #  Hiçbir adımda kullanıcıdan terminal bilgisi istenmez.
 # ============================================================================
 
 PY_MIN = (3, 8)
 PY_SURUM = "3.13.7"          # Windows'ta kurulacak sürüm
-TS_INDIRME = "https://tailscale.com/download/windows"
-TS_MSI = "https://pkgs.tailscale.com/stable/tailscale-setup-latest-amd64.msi"
 
 
 def _internet_var(host="www.python.org", port=443, sn=6):
@@ -243,48 +241,9 @@ def pillow_kur(py_cmd=None):
     return ""
 
 
-def tailscale_kur():
-    """Tailscale yoksa indirip kurar (yalnız Windows'ta tam otomatik)."""
-    if tailscale_bin():
-        return True
-    say("     Tailscale yok (ChatGPT bağlantısı bunu kullanır) — kuruluyor…", "warn")
-    if not _internet_var("pkgs.tailscale.com"):
-        say("     ❌ İnternet yok.", "err")
-        return False
-    if IS_WIN:
-        hedef = os.path.join(os.environ.get("TEMP") or "/tmp", "tailscale-setup.msi")
-        try:
-            import urllib.request
-            say("     ⬇️  indiriliyor: Tailscale (~40 MB)")
-            urllib.request.urlretrieve(TS_MSI, hedef)
-            say("     ⚙️  kuruluyor (Windows izin penceresi çıkabilir → 'Evet')…")
-            subprocess.run(["msiexec", "/i", hedef, "/qn", "/norestart"], timeout=900)
-            try:
-                os.remove(hedef)
-            except Exception:
-                pass
-            if tailscale_bin():
-                say("     ✅ Tailscale kuruldu", "ok")
-                say("     🔑 Tarayıcı açılacak: Google/Microsoft hesabıyla giriş yapın.", "warn")
-                try:
-                    subprocess.Popen([tailscale_bin(), "up"])
-                except Exception:
-                    pass
-                return True
-            say("     ⚠️  Tailscale kurulumu tamamlanmadı (yönetici izni gerekebilir).", "warn")
-            say(f"         Elle: {TS_INDIRME}", "warn")
-            return False
-        except Exception as e:
-            say(f"     ❌ {e}", "err")
-            say(f"         Elle: {TS_INDIRME}", "warn")
-            return False
-    say(f"     Elle kurun: https://tailscale.com/download ({OS_NAME})", "warn")
-    return False
-
-
 def gereksinimler(sessiz=False):
     """Tüm gereksinimleri tek tek kontrol eder, eksiği kurar. Özet döner."""
-    sonuc = {"python": False, "pip": False, "pillow": "", "tailscale": False}
+    sonuc = {"python": False, "pip": False, "pillow": ""}
     if not sessiz:
         head("Gereksinimler — eksik olan otomatik kurulur")
 
@@ -306,12 +265,6 @@ def gereksinimler(sessiz=False):
         say("     ✅ pip hazır" if sonuc["pip"] else "     ⚠️  pip yok", "ok" if sonuc["pip"] else "warn")
         say("     ✅ Pillow %s" % sonuc["pillow"] if sonuc["pillow"] else
             "     ⚠️  Pillow yok (ekran görüntüsü sınırlı)", "ok" if sonuc["pillow"] else "warn")
-
-    # 4) Tailscale
-    sonuc["tailscale"] = bool(tailscale_bin()) or tailscale_kur()
-    if not sessiz and not sonuc["tailscale"]:
-        say("     ⚠️  Tailscale yok — ChatGPT bağlantısı kurulamaz (Claude/Cursor çalışır)", "warn")
-    return sonuc
 
 
 def otomatik_kur():
@@ -448,42 +401,27 @@ def uninstall_clients():
 #  CHATGPT / TARAYICI AI  → HTTPS relay
 # ============================================================================
 
-def tailscale_bin():
-    p = shutil.which("tailscale")
-    if p:
-        return p
-    if IS_WIN:
-        for c in (r"C:\Program Files\Tailscale\tailscale.exe",
-                  r"C:\Program Files (x86)\Tailscale\tailscale.exe"):
-            if os.path.exists(c):
-                return c
-    if OS_NAME == "Darwin" and os.path.exists("/Applications/Tailscale.app/Contents/MacOS/Tailscale"):
-        return "/Applications/Tailscale.app/Contents/MacOS/Tailscale"
-    return None
+def _port_acik(port, host="127.0.0.1", tmo=0.6):
+    """Sunucu gerçekten dinliyor mu? (anında cevap — beklemez)"""
+    import socket as _s
+    try:
+        with _s.create_connection((host, int(port)), timeout=tmo):
+            return True
+    except Exception:
+        return False
 
 
 def chatgpt_setup():
     head("ChatGPT / tarayıcıdaki AI — bağlantı kurulumu")
     say("""
-  Ne olacak?
+  Ne olacak? (3 adım, hepsi otomatik)
     1) Bu bilgisayarda küçük bir sunucu açılır (GhostPilot köprüsü)
-    2) Tailscale bu sunucuyu HTTPS ile internete açar (size özel adres)
-    3) ChatGPT'ye o adresi 'Connector' olarak eklersiniz
-    4) ChatGPT sizin bilgisayarınızda komut çalıştırır, dosya okur/yazar
+    2) Sunucu, size özel bir HTTPS adresine bağlanır (tünel)
+    3) O adresi ChatGPT'ye eklersiniz
+
+  Ek program gerekmez: tünel için yalnız `ssh` kullanılır — Windows 10/11,
+  macOS ve Linux'ta hazır gelir. Ek program, hesap, kayıt YOK.
 """)
-
-    ts = tailscale_bin()
-    if not ts:
-        say("  ❌ Tailscale bulunamadı — ChatGPT için gerekli (ücretsiz)", "err")
-        say("     https://tailscale.com/download adresinden kurun, giriş yapın.")
-        say("\n  Tailscale istemiyorsanız alternatifler:", "warn")
-        say("     • Claude Desktop  → python kur.py claude      (tünel GEREKMEZ)")
-        say("     • Cursor / VS Code → python kur.py cursor")
-        say("     • Aynı ağdaki cihaz → python ghostpilot.py relay --port 17381")
-        say("       ve 192.168.x.x:17381/mcp adresini kullanın.")
-        return 1
-
-    say(f"  ✅ Tailscale: {ts}", "ok")
 
     # port
     port = 17381
@@ -494,31 +432,32 @@ def chatgpt_setup():
     except Exception:
         pass
 
-    # tünel aç
-    step("1/3", f"HTTPS tüneli açılıyor (port {port})…")
+    # 1) sunucu ayakta mı?
+    step("1/3", f"Sunucu (port {port}) kontrol ediliyor…")
+    if not _port_acik(port):
+        try:
+            start_relay()
+        except Exception as e:
+            say(f"  ⚠️  sunucu: {e}", "warn")
+
+    # 2) tünel — TEK DÜĞME (ssh, ek program yok)
+    step("2/3", "Tünel açılıyor (tek komut, ek program yok)…")
+    url = ""
     try:
-        r = subprocess.run([ts, "funnel", "--bg", str(port)],
-                           capture_output=True, text=True, timeout=90)
+        r = py(["tunel-ac"])
         out = (r.stdout or "") + (r.stderr or "")
-        if r.returncode != 0 and "already" not in out.lower():
-            say(f"  ⚠️  {out.strip()[:300]}", "warn")
+        for satir in out.splitlines():
+            if "https://" in satir and "/mcp" in satir:
+                parca = satir.split("https://", 1)[1].split()[0]
+                url = "https://" + parca
+                break
+        if not url:
+            say("  ⚠️  Tünel adresi okunamadı. Elle deneyin:", "warn")
+            say("     python ghostpilot.py tunel-ac", "warn")
     except Exception as e:
         say(f"  ⚠️  tünel: {e}", "warn")
 
-    # URL
-    url = ""
-    try:
-        r = subprocess.run([ts, "status", "--json"], capture_output=True,
-                           text=True, timeout=30)
-        dns = (json.loads(r.stdout or "{}").get("Self") or {}).get("DNSName") or ""
-        if dns:
-            url = "https://" + dns.rstrip(".") + "/mcp"
-    except Exception:
-        pass
-    if not url:
-        say("  ⚠️  Özel adres okunamadı. 'tailscale status --json' çıktısına bakın.", "warn")
-
-    step("2/3", "Erişim anahtarı")
+    step("2/3", "Erişim anahtarı hazırlanıyor")
     tok = ""
     tok_path = os.path.join(HOME, ".ghostpilot", "token")
     try:
@@ -551,7 +490,7 @@ def chatgpt_setup():
     say("")
     say("  Ad            : GhostPilot")
     say("  Bağlantı      : Sunucu URL'si")
-    say(f"  Sunucu URL'si : {url_with_token or 'https://<makine>.tailXXXX.ts.net/mcp?token=...'}")
+    say(f"  Sunucu URL'si : {url_with_token or 'https://<rastgele>.free.pinggy.net/mcp?token=...'}")
     say("  Kimlik doğr.  : Kimlik doğrulama yok")
     say('  ☑ "Anladım ve devam etmek istiyorum"')
     say("")
@@ -564,7 +503,7 @@ def chatgpt_setup():
     say("─" * 60)
     say("\n  Arena / başka tarayıcı AI: aynı URL + Bearer anahtarı.", "dim")
     say("  Güvenlik: anahtar yalnız sizde; tüneli kapatmak için:")
-    say(f"     {ts} funnel --bg=false {port}", "dim")
+    say("     python ghostpilot.py tunel-kapat", "dim")
     return 0
 
 
@@ -750,19 +689,17 @@ def otomatik(kapat=False):
 #  SUNUCU + UÇTAN UCA TEST
 # ============================================================================
 
-def tailscale_url(port):
-    ts = tailscale_bin()
-    if not ts:
-        return ""
+def tunel_url(port):
+    """Açık tünelin adresi (yoksa boş). Ek program gerekmez."""
     try:
-        r = subprocess.run([ts, "status", "--json"], capture_output=True, text=True, timeout=30)
-        dns = (json.loads(r.stdout or "{}").get("Self") or {}).get("DNSName") or ""
-        if dns:
-            return "https://" + dns.rstrip(".") + "/mcp"
+        d = json.load(open(os.path.join(HOME, ".ghostpilot", "tunel.json"),
+                           encoding="utf-8"))
+        u = (d.get("url") or "").strip()
+        if u:
+            return u if u.endswith("/mcp") else u.rstrip("/") + "/mcp"
     except Exception:
         pass
     return ""
-
 
 def start_relay():
     head("Sunucuyu başlat")
@@ -830,11 +767,11 @@ def run_test():
         say(f"     ❌ {e}", "err")
         return 1
 
-    # 4) tünel
-    say("\n  4) Tailscale tüneli")
-    url = tailscale_url(port)
+    # 4) tünel (SSH — ek program yok)
+    say("\n  4) Tünel (ssh — ek program gerekmez)")
+    url = tunel_url(port)
     if not url:
-        say("     ⚠️  özel adres okunamadı (Tailscale girişi?)", "warn")
+        say("     ⚠️  tünel kapalı. Açmak için: python kur.py tunel", "warn")
         return 0
     say(f"     {url}", "dim")
     public = url.replace("/mcp", "/health")
@@ -844,11 +781,11 @@ def run_test():
         say("     ✅ internetten erişilebiliyor", "ok")
     except urllib.error.HTTPError as e:
         say(f"     ❌ HTTP {e.code}", "err")
-        say("     → funnel kapalı olabilir:  tailscale funnel --bg " + str(port))
+        say("     → tüneli yenileyin:  python kur.py tunel")
         return 1
     except Exception as e:
         say(f"     ❌ {e}", "err")
-        say("     → funnel açık mı?  tailscale funnel --bg " + str(port))
+        say("     → tüneli yenileyin:  python kur.py tunel")
         return 1
 
     say("\n" + "─" * 60)
@@ -878,7 +815,7 @@ def relay_running(port=None):
 
 
 def tunel_icin_agi_ac():
-    """Tek düğme tüneli (SSH/Tailscale) 127.0.0.1'e tünel açar; o yüzden
+    """Tek düğme tüneli (SSH) 127.0.0.1'e tünel açar; o yüzden
     sunucunun yalnız yerel arayüze bağlanması yeterli ve daha güvenli.
     Ağ arayüzüne açmak GEREKMEZ. İleride gerekirse buradan True döndürün."""
     return False
@@ -911,31 +848,14 @@ def start_relay_bg():
     return False, "başlatılamadı"
 
 
-def ts_state():
-    """(tailscale_yolu, durum, dns_adı)"""
-    ts = tailscale_bin()
-    if not ts:
-        return None, "yok", ""
-    dns, state = "", ""
-    try:
-        r = subprocess.run([ts, "status", "--json"], capture_output=True,
-                           text=True, timeout=25)
-        d = json.loads(r.stdout or "{}")
-        state = (d.get("BackendState") or "").lower()
-        dns = (d.get("Self") or {}).get("DNSName") or ""
-    except Exception:
-        pass
-    return ts, state, dns
-
-
 def oto():
     head("Tek tuş kurulum — her şey otomatik")
     ok_all = True
 
-    # 1) Gereksinimler (Python · pip · Pillow · Tailscale) — eksikse KURAR
-    step("1/7", "Gereksinimler (Python · pip · Pillow · Tailscale)")
+    # 1) Gereksinimler (Python · pip · Pillow) — eksikse KURAR
+    step("1/7", "Gereksinimler (Python · pip · Pillow)")
     # setup.py ile çağrıldıysa gereksinimler zaten kurulmuş; tekrar indirmeyelim.
-    g = ({"python": True, "pip": True, "pillow": "kurulu", "tailscale": bool(tailscale_bin())}
+    g = ({"python": True, "pip": True, "pillow": "kurulu"}
          if os.environ.get("GP_SETUP_TARAFINDAN") else gereksinimler(sessiz=True))
     if not g["python"]:
         say("     ❌ Python yok ve kurulamadı.", "err")
@@ -944,9 +864,8 @@ def oto():
     pv = python_surum()
     say(f"     ✅ Python {pv['surum']}", "ok")
     say(f"     {'✅' if g['pip'] else '⚠️ '} pip · "
-        f"{'✅ Pillow ' + g['pillow'] if g['pillow'] else '⚠️  Pillow yok'} · "
-        f"{'✅ Tailscale' if g['tailscale'] else '⚠️  Tailscale yok'}",
-        "ok" if (g["pip"] and g["pillow"] and g["tailscale"]) else "warn")
+        f"{'✅ Pillow ' + g['pillow'] if g['pillow'] else '⚠️  Pillow yok'}",
+        "ok" if (g["pip"] and g["pillow"]) else "warn")
 
     # 2) Dosyalar
     step("2/7", "Dosyalar")
@@ -1005,34 +924,25 @@ def oto():
     else:
         say("     ℹ️  Claude/Cursor kurulu görünmüyor — atlandı (ChatGPT için gerek yok).")
 
-    # 5) Tailscale + tünel
-    step("5/7", "Tailscale ve HTTPS tüneli")
+    # 5) Tünel (SSH — ek program yok, hesap yok)
+    step("5/7", "HTTPS tüneli (ssh — ek program gerekmez)")
     port = port_cfg()
-    ts, state, dns = ts_state()
     url = ""
-    if not ts:
-        say("     ⚠️  Tailscale yok — ChatGPT bağlantısı kurulamaz.", "warn")
-        say("         https://tailscale.com/download → kur, giriş yap, sonra tekrar çalıştır.")
-        ok_all = False
-    elif state not in ("running", "starting"):
-        say(f"     ⚠️  Tailscale giriş yapmamış (durum: {state or 'bilinmiyor'}).", "warn")
-        say("         Şunu çalıştırın:  tailscale up")
-        ok_all = False
-    else:
-        try:
-            r = subprocess.run([ts, "funnel", "--bg", str(port)],
-                               capture_output=True, text=True, timeout=90)
-            out = ((r.stdout or "") + (r.stderr or "")).strip()
-            if r.returncode == 0 or "already" in out.lower():
-                say(f"     ✅ tünel açık (port {port})", "ok")
-            else:
-                say(f"     ⚠️  {out[:200]}", "warn")
-                ok_all = False
-        except Exception as e:
-            say(f"     ⚠️  {e}", "warn")
-            ok_all = False
-        if dns:
-            url = "https://" + dns.rstrip(".") + "/mcp"
+    try:
+        r = py(["tunel-ac"])
+        out = (r.stdout or "") + (r.stderr or "")
+        for satir in out.splitlines():
+            if "https://" in satir:
+                aday = satir.split("https://", 1)[1].split()[0]
+                url = "https://" + aday
+                break
+        if url:
+            say(f"     ✅ tünel hazır: {url[:70]}", "ok")
+        else:
+            say("     ⚠️  tünel açılamadı — kurulum devam ediyor.", "warn")
+            say("         Sonra deneyin: python kur.py tunel")
+    except Exception as e:
+        say(f"     ⚠️  tünel: {e}", "warn")
 
     # 6) Sunucu (arka planda)
     step("6/7", "Sunucu")
@@ -1081,7 +991,7 @@ def oto():
     say("")
     say("  Ad             : GhostPilot")
     say("  Bağlantı       : Sunucu URL'si")
-    say(f"  Sunucu URL'si  : {full or '(Tailscale gerekli)'}")
+    say(f"  Sunucu URL'si  : {full or '(tünel kapalı — python kur.py tunel)'}")
     say("  Kimlik doğr.   : OAuth")
     say("")
     say("  Kaydet'e basınca ChatGPT sizi GhostPilot'un KENDİ onay ekranına")
@@ -1149,7 +1059,7 @@ def guvenlik(args):
      python kur.py guvenlik ac       → token zorunlu
      python kur.py guvenlik kapat    → token gerekmez (tek tık kolaylığı)
 
-  Sadece kendi bilgisayarınızda ve Tailscale ağınızda kullanıyorsanız
+  Sadece kendi bilgisayarınızda ve kendi ağınızda kullanıyorsanız
   kapalı bırakmak pratiktir. Açık bırakırsanız URL'yi bilen herkes erişemez.
 """, "dim")
         return 0
@@ -1243,14 +1153,12 @@ def doktor():
             # pystray masaüstü oturumu yoksa da patlayabilir — kurulum sorunu değil
             bilgi(f"{ad}: bu oturumda kullanılamıyor ({type(e).__name__})")
 
-    # 7) Tailscale (uzaktan erişim)
-    ts, st, dns = ts_state()
-    if not ts:
-        bilgi("Tailscale yok — yalnız yerel ağda çalışır (isteğe bağlı)")
-    elif st == "running":
-        iyi(f"Tailscale çalışıyor: {dns}")
+    # 7) Tünel (uzaktan erişim) — ssh, ek program yok
+    u = tunel_url(port)
+    if u:
+        iyi(f"Tünel açık: {u}")
     else:
-        bilgi(f"Tailscale kurulu ama bağlı değil (durum: {st})")
+        bilgi("Tünel kapalı — açmak için: python kur.py tunel")
 
     # 8) Lisans / kota
     try:
@@ -1274,28 +1182,16 @@ def doktor():
     return 0 if sorun == 0 else 1
 
 def tunel(ac=True):
-    """Tailscale tüneli: tarayıcıdaki ChatGPT ve telefon erişimi için HTTPS adresi."""
-    head("Uzaktan erişim tüneli (Tailscale)")
-    ts, st, dns = ts_state()
-    if not ts:
-        say("  ❌ Tailscale bulunamadı.", "err")
-        say("     Kurmak için:  python kur.py tailscale-kur")
-        return 1
-    if st != "running":
-        say(f"  ❌ Tailscale bağlı değil (durum: {st}).", "err")
-        say("     Tailscale uygulamasını açıp oturum açın, sonra tekrar deneyin.")
-        return 1
-
+    """Tek düğme tünel — SSH ile ücretsiz HTTPS adresi. Ek program YOK."""
+    head("Uzaktan erişim tüneli (tek düğme, ek program yok)")
     port = port_cfg()
     if not ac:
         try:
-            subprocess.run([ts, "funnel", "--bg=false", str(port)],
-                           capture_output=True, text=True, timeout=60)
-            say(f"  ✅ Tünel kapatıldı (port {port}).", "ok")
-            return 0
-        except Exception as e:
-            say(f"  ⚠️  Tünel kapatılamadı: {e}", "warn")
-            return 1
+            py(["tunel-kapat"])
+        except Exception:
+            pass
+        say(f"  ✅ Tünel kapatıldı (port {port}).", "ok")
+        return 0
 
     if not relay_running(port):
         say("  ℹ️  Sunucu kapalı — önce başlatılıyor…", "dim")
@@ -1305,28 +1201,19 @@ def tunel(ac=True):
         except Exception:
             pass
 
-    try:
-        r = subprocess.run([ts, "funnel", "--bg", str(port)],
-                           capture_output=True, text=True, timeout=90)
-        cikti = (r.stdout or "") + (r.stderr or "")
-        if r.returncode != 0:
-            say(f"  ❌ Tünel açılamadı (çıkış {r.returncode}).", "err")
-            for satir in cikti.strip().splitlines()[:4]:
-                say(f"     {satir}", "dim")
-            say("     İpucu: Tailscale hesabında Funnel açık olmalı")
-            say("            (admin panel → DNS → HTTPS certificates + Funnel).")
-            return 1
-        adres = f"https://{dns.rstrip('.')}/mcp" if dns else ""
-        say("  ✅ Tünel açık.", "ok")
-        if adres:
-            say(f"     ChatGPT'ye yapıştırılacak adres:  {adres}", "dim")
-        say("")
-        say("  ⚠️  Bu adres internete açıktır — erişim anahtarı olmadan istek geçmez.", "warn")
-        say("     İşiniz bitince kapatın:  python kur.py tunel-kapat")
-        return 0
-    except Exception as e:
-        say(f"  ❌ Tünel hatası: {e}", "err")
+    r = py(["tunel-ac"])
+    out = ((r.stdout or "") + (r.stderr or "")).strip()
+    for satir in out.splitlines():
+        if "https://" in satir:
+            say("  " + satir.strip(), "dim")
+    if r.returncode != 0:
+        say("  ❌ Tünel açılamadı.", "err")
+        say("     Alternatif: aynı Wi-Fi'daki cihazlar için")
+        say(f"     http://192.168.x.x:{port}/mcp adresini kullanın.")
         return 1
+    say("  ✅ Tünel açık. Adresi panelden kopyalayabilirsiniz.", "ok")
+    say("     Kapatmak için: python kur.py tunel-kapat")
+    return 0
 
 
 def durum():
@@ -1359,12 +1246,12 @@ def durum():
     say("  " + ("🛡️  Bekçi aktif — çökerse kendisi geri getirir" if bekci else
                 "⚠️  Bekçi yok — çökerse geri gelmez (python kur.py basla)"),
         "ok" if bekci else "warn")
-    url = tailscale_url(port)
+    url = tunel_url(port)
     if url:
         say(f"  🌐 ChatGPT adresi: {url}", "dim")
         say("     Kimlik doğrulama: OAuth")
     else:
-        say("  ⚠️  Tailscale tüneli yok (ChatGPT bağlantısı için gerekli)", "warn")
+        say("  ℹ️  Tünel kapalı — açmak için: python kur.py tunel", "dim")
     return 0
 
 
@@ -1494,12 +1381,12 @@ def basla(sessiz=False):
 
 
 def tam_kapat():
-    """Durdur + otomatik başlatmayı kaldır + Tailscale tünelini kapat."""
+    """Durdur + otomatik başlatmayı kaldır + tüneli kapat."""
     head("Tamamen kapat")
     say("  Yapılacaklar:")
     say("    1) Sunucu ve bekçi durdurulacak")
     say("    2) Açılışta otomatik başlatma kaldırılacak")
-    say("    3) Tailscale HTTPS tüneli kapatılacak  (ChatGPT erişimi kesilir)")
+    say("    3) HTTPS tüneli kapatılacak  (ChatGPT erişimi kesilir)")
     say("")
     try:
         if input("  Devam? (e/H): ").strip().lower() != "e":
@@ -1515,23 +1402,12 @@ def tam_kapat():
         say("  ✅ Otomatik başlatma kaldırıldı.")
     except Exception as e:
         say(f"  ⚠️  Otomatik başlatma: {e}", "warn")
-    ts = tailscale_bin()
-    port = port_cfg()
-    if ts:
-        try:
-            r = subprocess.run([ts, "funnel", "--bg=false", str(port)],
-                               capture_output=True, text=True, timeout=60)
-            say("  ✅ Tailscale tüneli kapatıldı." if r.returncode == 0
-                else "  ⚠️  Tünel kapatılamadı (elle: tailscale funnel --bg=false %d)" % port,
-                "ok" if r.returncode == 0 else "warn")
-        except Exception as e:
-            say(f"  ⚠️  Tailscale: {e}", "warn")
-    else:
-        say("  ℹ️  Tailscale yok — kapatılacak tünel yok.", "dim")
-    say("")
-    say("  🔒 Artık hiçbir sohbet programı bilgisayarınıza erişemez.", "ok")
-    say("     Yeniden açmak için: python kur.py basla")
-    return 0
+    try:
+        subprocess.run([sys.executable, os.path.join(HERE, "ghostpilot.py"),
+                        "tunel-kapat"], capture_output=True, timeout=30)
+        say("  ✅ Tünel kapatıldı.", "ok")
+    except Exception as e:
+        say(f"  ⚠️  Tünel: {e}", "warn")
 
 
 def otomatik_sessiz_kapat():
@@ -2024,7 +1900,7 @@ def menu():
         say("""
   1) 🔗 BAĞLA — paneli aç, tek düğmeyle adres üret (EN KOLAY)
   1b) Claude Desktop'a bağla       (tünel gerekmez, 2 dakika)
-  2) ChatGPT / tarayıcı AI'ya bağla (Tailscale ile, adım adım)
+  2) ChatGPT / tarayıcı AI'ya bağla (tek düğme tünel)
   3) Cursor / VS Code'a bağla
   4) Kurulumu denetle (doctor)
   5) Yeni erişim anahtarı
@@ -2050,7 +1926,7 @@ def menu():
  25) 💎 Lisans / Pro (aylık kullanım)
  26) 🧹 Aylık sayacı sıfırla (lisans korunur)
  27) 📱 Bu bilgisayarın kimliği
- 28) 🧰 Eksikleri kur / onar (Python · Pillow · Tailscale)
+ 28) 🧰 Eksikleri kur / onar (Python · Pillow)
  29) 🖥️  Masaüstü kısayolu oluştur
  30) 🪟 Program arayüzü (pencere)
  31) 🌍 Dil değiştir (TR/EN/DE/ES)
@@ -2424,8 +2300,10 @@ def main():
         return 0 if otomatik_kur() == 0 else 1
     if cmd in ("python-kur", "pythonkur"):
         return 0 if python_kur() else 1
-    if cmd in ("tailscale-kur", "tailscalekur"):
-        return 0 if tailscale_kur() else 1
+    if cmd in ("eski-tunel-kur", "tunel-programi-kur"):
+        say("  ℹ️  Ek tünel programı GEREKMİYOR — tünel ssh ile açılıyor.")
+        say("     Deneyin: python kur.py tunel")
+        return 0
     if cmd == "izin":
         return izin(sys.argv[2:])
     if cmd in ("izin-sil",):

@@ -59,7 +59,7 @@ KOPYALANACAK = [
     "ui.py", "kurulum_ui.py", "ikon.py", "tepsi.py", "kaldir.py",
     "kisayol.py", "hata.py",
     "input_bg.py", "goverlay.py", "belge.py",
-    "sanaldunya.py", "ui_bul.py",
+    "sanaldunya.py", "ui_bul.py", "goz.py", "hizli.py",
     "GhostPilot.ico", "icon-256.png", "icon-128.png", "icon-48.png",
     "icon-32.png", "icon-16.png", "icon.png", "icon.svg", "favicon.ico",
     "chatgpt-icon-256.png", "KURULUM_REHBERI.md", "CHATGPT_EKLEME.md", "BAGLA.md", "eklenti.json", "SECURITY.md",

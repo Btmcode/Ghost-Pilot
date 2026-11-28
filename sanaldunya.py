@@ -25,6 +25,7 @@ import os
 import platform
 import shutil
 import socket
+import time
 
 OS_NAME = platform.system()
 IS_WIN = OS_NAME == "Windows"
@@ -216,3 +217,38 @@ def durum():
                 "imleci, kendi ekran bölgesi." if acik()
                 else "Gerçek bilgisayarda çalışıyor (varsayılan)."),
     }
+
+# ============================================================================
+#  HEDEF PENCERE KİLİDİ — klavye sizin pencerenize gitmez
+# ============================================================================
+#  Sorun: sanal modda fare sınırlı ama KLAVYE odaklı pencereye gider. Kullanıcı
+#  kendi penceresinde yazarken ajan da yazarsa ikisi karışır.
+#
+#  Çözüm: ajan tıkladığı pencereyi HATIRLAR ve yazıyı yalnız oraya gönderir.
+#  Kullanıcının ön plandaki penceresi asla hedef olmaz.
+_HEDEF = {"hwnd": 0, "baslik": "", "t": 0.0}
+_HEDEF_OMUR = 900.0     # 15 dakika hatırla
+
+
+def hedef_ayarla(hwnd, baslik=""):
+    try:
+        _HEDEF["hwnd"] = int(hwnd or 0)
+        _HEDEF["baslik"] = str(baslik or "")[:80]
+        _HEDEF["t"] = time.time()
+        return True
+    except Exception:
+        return False
+
+
+def hedef():
+    """Ajanın yazacağı pencere (0 = yok)."""
+    if not _HEDEF["hwnd"]:
+        return 0
+    if time.time() - _HEDEF["t"] > _HEDEF_OMUR:
+        return 0
+    return _HEDEF["hwnd"]
+
+
+def hedef_bilgi():
+    return {"hwnd": hedef(), "baslik": _HEDEF["baslik"],
+            "yas": (time.time() - _HEDEF["t"]) if _HEDEF["t"] else None}

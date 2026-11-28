@@ -548,6 +548,14 @@ def bg_click(x, y, button="left", double=False, visible=True, label=""):
             time.sleep(0.03)
             u.PostMessageW(hwnd, up, 0, lparam)
             time.sleep(0.05)
+        # SANAL MOD: yazı bundan sonra BU pencereye gider (kullanıcının
+        # ön plandaki penceresine değil) → çalışma alanına müdahale biter.
+        try:
+            import sanaldunya
+            if sanaldunya.acik():
+                sanaldunya.hedef_ayarla(hwnd)
+        except Exception:
+            pass
         return {"ok": True, "x": x, "y": y, "mode": "arka plan (imleç oynamadı)",
                 "window": hwnd, "concurrent": True}
     except Exception as e:
@@ -627,10 +635,26 @@ def bg_type(text, visible=True, delay=0.0, hwnd=None):
             return {"ok": False, "error": str(e)}
 
     u = _u32()
+    target = 0
+    # 1) Açıkça verilen pencere
     try:
-        target = int(hwnd or u.GetForegroundWindow())
+        target = int(hwnd or 0)
     except Exception:
         target = 0
+    # 2) SANAL MOD: ajanın kendi seçtiği pencere (kullanıcınınki DEĞİL)
+    if not target:
+        try:
+            import sanaldunya
+            if sanaldunya.acik():
+                target = int(sanaldunya.hedef() or 0)
+        except Exception:
+            target = 0
+    # 3) Son çare: odaklı pencere (gerçek makine davranışı — değişmedi)
+    if not target:
+        try:
+            target = int(u.GetForegroundWindow())
+        except Exception:
+            target = 0
     if not target:
         try:
             import screen
@@ -670,8 +694,20 @@ def bg_key(combo, hwnd=None):
         except Exception as e:
             return {"ok": False, "error": str(e)}
     u = _u32()
+    target = 0
     try:
-        target = int(hwnd or u.GetForegroundWindow())
+        target = int(hwnd or 0)
+    except Exception:
+        target = 0
+    if not target:
+        try:
+            import sanaldunya
+            if sanaldunya.acik():
+                target = int(sanaldunya.hedef() or 0)
+        except Exception:
+            target = 0
+    try:
+        target = target or int(u.GetForegroundWindow())
         WM_KEYDOWN, WM_KEYUP = 0x0100, 0x0101
         vks = [_KEYMAP.get(k, ord(k.upper()) if len(k) == 1 else 0) for k in keys]
         for vk in vks:

@@ -50,7 +50,7 @@ Be honest with yourself about these:
 - [ ] Use `onay: "hepsi"` when trying a new assistant
 - [ ] Enable read-only mode for "read my files and summarise" tasks
 - [ ] Run `python kur.py dur` when you finish working
-- [ ] Close the tunnel (`tailscale funnel --bg=false 17381`) after phone sessions
+- [ ] Close the tunnel (`python kur.py tunel-kapat`) after phone sessions
 - [ ] Review `~/.ghostpilot/audit.log` occasionally
 
 ## Dependencies

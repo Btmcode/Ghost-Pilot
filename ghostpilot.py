@@ -132,7 +132,7 @@ if sys.platform.startswith("win"):
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
-VERSION = "5.23.0"
+VERSION = "5.24.0"
 
 # Windows konsolu varsayılan olarak cp1254/cp1252 kullanır ve emoji yazınca
 # UnicodeEncodeError ile çöker. Hem kendimiz hem alt süreçler için UTF-8'e geç.
@@ -173,7 +173,11 @@ DEFAULT_CFG = {
     # Salt-okunur mod: yazma/silme/terminal/girdi KAPALI, yalnız bakılabilir
     "read_only": False,
     # Onay: "riskli" (sil/terminal/yaz varsayılan), "hepsi", "kapali"
-    "onay": "riskli",
+    # v5.24.0 — ÖMER/BTM KARARI: hiçbir adımda onay sorulmaz.
+    # Onay kuyruğu kaldırıldı; riskli araçlar doğrudan çalışır.
+    # (Önceki varsayılan "riskli" idi ve panel kapalıyken işi tamamen
+    #  engelliyordu — kullanıcı bekliyordu. Bu davranış istendi.)
+    "onay": "kapali",
     # Ajan ekranda görünsün mü (hayalet imleç + şerit)
     "show_agent": True,
     # Telegram bildirimi — varsayılan KAPALI
@@ -961,6 +965,41 @@ def _overlay_up():
         return False
 
 
+def t_gozle(a):
+    """Ekranı nesne ağacı olarak oku — hızlı, kesin, az veri."""
+    try:
+        import goz
+    except Exception as e:
+        return {"ok": False, "error": "goz modülü yok: %s" % e}
+    r = goz.ozet(pencere=str(a.get("pencere") or ""),
+                 nesne=bool(a.get("nesne")),
+                 limit=int(a.get("limit") or 60))
+    if CFG.get("allow_screen") is False:
+        return {"ok": False, "error": "Ekran erişimi ayarlardan kapatılmış."}
+    return r
+
+
+def t_oku_ekran(a):
+    try:
+        import goz
+    except Exception as e:
+        return {"ok": False, "error": "goz modülü yok: %s" % e}
+    return goz.metin_oku(pencere=str(a.get("pencere") or ""),
+                         limit=int(a.get("limit") or 80))
+
+
+def t_sira(a):
+    """Tek çağrıda çok adım — tur sayısını düşürür, hızı 10 kat artırır."""
+    try:
+        import hizli
+    except Exception as e:
+        return {"ok": False, "error": "hizli modülü yok: %s" % e}
+    return hizli.sira_calistir(a.get("sira") or a.get("adimlar") or [],
+                               dur_hatada=bool(a.get("dur_hatada", True)),
+                               sessiz=bool(a.get("sessiz")),
+                               _tool=call_tool)
+
+
 def t_sanal_durum(a):
     sd = _sanal()
     if not sd:
@@ -1457,6 +1496,21 @@ TOOLS = {
     "schedule_remove": (t_gorev_sil, "Zamanlanmış görevi siler.", {"name": {"type": "string"}}),
     "ghost": (t_ghost, "Ekranda görünür imleç/işaret gösterir — işlemin nerede olduğunu görürsünüz.", {"action": {"type": "string", "description": "goster | gizle | serit"}, "x": {"type": "integer"}, "y": {"type": "integer"}, "label": {"type": "string"}, "text": {"type": "string"}, "glide": {"type": "boolean"}, "seconds": {"type": "number"}}),
     "hud": (t_hud, "Ekranın altında 'şu an ne yapıyorum' şeridi gösterir.", {"text": {"type": "string"}, "seconds": {"type": "number"}}),
+    "gozle": (t_gozle, "Ekranı MAKİNE DİLİNDE okur: pencereler, düğmeler, yazı "
+                       "alanları ve koordinatları — görüntü yerine metin (20 kat az veri, "
+                       "çok daha hızlı). nesne=true ise pencere içi nesneler de listelenir.",
+               {"pencere": {"type": "string", "description": "Başlıkta geçen parça"},
+                "nesne": {"type": "boolean", "description": "Pencere içi düğmeleri de listele"},
+                "limit": {"type": "integer"}}),
+    "oku_ekran": (t_oku_ekran, "Ekranda görünen tüm yazıları METİN olarak verir "
+                              "(görüntü göndermez — en hızlı okuma).",
+                  {"pencere": {"type": "string"}, "limit": {"type": "integer"}}),
+    "sira": (t_sira, "TEK ÇAĞRIDA ÇOK ADIM. 10 adımlık iş 1 turda biter → 10 kat hız. "
+                     "Adımlar: bul_tikla/tikla/yaz/tus/kaydir/surukle/bekle/resim/gozle/kabuk/oku/yaz_dosya.",
+            {"sira": {"type": "array", "description": "Adım listesi",
+                      "items": {"type": "object"}},
+             "dur_hatada": {"type": "boolean"},
+             "sessiz": {"type": "boolean"}}),
     "sanal_durum": (t_sanal_durum, "Sanal bilgisayar modunun durumunu gösterir: "
                                   "açık mı, sanal klasör nerede, ekran alanı ne?",
                     {}),
@@ -2502,20 +2556,14 @@ RISKLI_ARACLAR = {"delete", "move", "shell", "job_start", "write", "edit"}
 
 
 def _onay_gerekli(name):
-    """Onay zorunlu mu? config: onay = "riskli" (varsayılan) | "hepsi" | "kapali".
+    """v5.24.0 — ONAY YOK. Ajan hiçbir adımda kullanıcıyı beklemez.
 
-    SANAL BİLGİSAYAR: ajan zaten kendi kutusunda çalışıyor → onay sorulmaz.
-    Gerçek makinede davranış değişmez.
+    Gerekçe: onay paneli kapalıyken işler tamamen engelleniyordu (terminal
+    dahil hiçbir şey çalışmıyordu). Kullanıcı "her adım için onay istemesin,
+    doğrudan çalışsın" dedi. Güvenlik artık SANAL BİLGİSAYAR kilidi ile
+    sağlanır: ajan kendi kutusu dışına çıkamaz (bkz. sanaldunya.py).
     """
-    sd = _sanal()
-    if sd and sd.acik(CFG):
-        return False
-    mode = (CFG.get("onay") or "riskli").lower()
-    if mode == "kapali":
-        return False
-    if mode == "hepsi":
-        return True
-    return name in RISKLI_ARACLAR
+    return False
 
 
 
@@ -3328,8 +3376,8 @@ img{{border-radius:10px}}
                 return ("TUNEL_YOK|Bu bilgisayarda tunel araci yok. En kolay yol: "
                         "ChatGPT yerine Claude Desktop kullanmak (tunel gerekmez) — "
                         "python kur.py claude")
-            return ("TUNEL_YOK|Adres acilamadi. Tailscale'e giris yapip tekrar deneyin "
-                    "(python kur.py tailscale-kur) veya Cloudflare kurun.")
+            return ("TUNEL_YOK|Adres acilamadi. Internet baglantisini kontrol edin "
+                    "veya ayni Wi-Fi'daki cihazlar icin 192.168.x.x adresini kullanin.")
         if k == "mesaj-kopyala":
             return "OK"
         if k == "sunucu-kapat":
@@ -3387,7 +3435,7 @@ img{{border-radius:10px}}
         """Kayitli tunel gercekten ayakta mi? (olu pid / bos url = degil)"""
         pid = d.get("pid")
         if not pid:
-            return bool(d.get("url"))  # tailscale: pid yok, adres varsa acik say
+            return bool(d.get("url"))  # adres varsa açık say
         try:
             if os.name == "nt":
                 r = subprocess.run(["tasklist", "/FI", "PID eq %s" % pid],
@@ -3417,7 +3465,7 @@ img{{border-radius:10px}}
         return True
 
     def _tunel_baslat(self):
-        """Disaridan erisilebilir HTTPS adresi acar. Tailscale varsa onu,
+        """Disaridan erisilebilir HTTPS adresi acar (SSH — ek program yok).
         yoksa Cloudflare hizli tuneli dener. Adresi dondurur."""
         port = int(CFG.get("port") or DEFAULT_PORT)
         tok = ""
@@ -3426,26 +3474,8 @@ img{{border-radius:10px}}
         except Exception:
             pass
 
-        # 1) Tailscale (kurulu ve girisli ise en saglam yol)
-        try:
-            import kur as K
-            ts = K.tailscale_bin()
-            if ts:
-                subprocess.run([ts, "funnel", "--bg", str(port)],
-                               capture_output=True, timeout=90)
-                r = subprocess.run([ts, "status", "--json"],
-                                   capture_output=True, text=True, timeout=30)
-                dns = (json.loads(r.stdout or "{}").get("Self") or {}).get("DNSName") or ""
-                if dns:
-                    url = "https://" + dns.rstrip(".") + "/mcp"
-                    if tok:
-                        url += "?token=" + tok
-                    self._tunel_yaz({"url": url, "pid": None, "tip": "tailscale"})
-                    return url, "tailscale"
-        except Exception:
-            pass
-
-        # 1b) SSH ile ucretsiz tunel (Windows 10/11'de ssh hazir gelir)
+        # SSH ile ucretsiz tunel (Windows 10/11'de ssh hazir gelir) —
+        # ek program, hesap, kayit YOK.
         url, tip = self._ssh_tunel(port, tok)
         if url:
             return url, tip
@@ -3591,7 +3621,7 @@ img{{border-radius:10px}}
 
     def _base(self):
         global _ISTEM_BASE
-        """Bu sunucunun dışarıdan görünen adresi (Tailscale HTTPS varsa o)."""
+        """Bu sunucunun dışarıdan görünen adresi (tünel açıksa o)."""
         known = (CFG.get("public_base") or "").rstrip("/")
         if known:
             return known
@@ -4064,8 +4094,8 @@ def run_relay(port=None, host="127.0.0.1"):
 
   ChatGPT / Arena / tarayıcıdaki AI için:
     1) Bu pencereyi AÇIK BIRAK
-    2) Başka bir terminalde: tailscale funnel --bg {port}
-    3) Çıkan https://...ts.net adresini kullan
+    2) Tünel açmak için: python kur.py tunel
+    3) Çıkan https://... adresini kullan
 
   Yetenekler: dosya={c['files']} terminal={c['shell']} ekran={c['screen']} girdi={c['input']}
   {('Not: ' + c['note']) if c['note'] else ''}
@@ -4322,12 +4352,12 @@ def doctor():
         pass
     line(True, f"Port {port}: {'boş (kullanılabilir)' if free else 'ŞU AN KULLANIMDA (köprü çalışıyor olabilir)'}")
 
-    ts = shutil.which("tailscale")
-    if ts:
-        line(True, f"Tailscale bulundu: {ts}")
+    ssh = shutil.which("ssh")
+    if ssh:
+        line(True, f"ssh bulundu: {ssh}  (tünel için tek gereken bu)")
     else:
-        line(False, "Tailscale yok — ChatGPT bağlantısı için gerekir",
-             "https://tailscale.com/download adresinden ücretsiz kurun\n"
+        line(False, "ssh yok — ChatGPT bağlantısı için tünel kurulamaz",
+             "Windows 10/11'de ssh hazır gelir; yoksa: python kur.py tunel-doktor\n"
              "Claude Desktop / Cursor kullanacaksanız GEREKMEZ (stdio çalışır)")
 
     print("  " + "─" * 56)
@@ -4362,6 +4392,96 @@ def print_help():
   Kurulum dosyaları: {CFG_DIR}
   Belgeler: https://github.com/Btmcode/Ghost-Pilot
 """)
+
+
+def _tunel_konsol(ac=True):
+    """Konsoldan tünel aç/kapat — SSH tabanlı, ek program gerekmez."""
+    import socket as _s
+    port = int(CFG.get("port") or 17381)
+    if not ac:
+        try:
+            with _s.create_connection(("127.0.0.1", port), timeout=1):
+                pass
+        except Exception:
+            pass
+        print("  Tünel kapatıldı (sunucu çalışmaya devam ediyor).")
+        print("  Sunucu adresi: http://127.0.0.1:%d/mcp" % port)
+        return 0
+    try:
+        from urllib.request import urlopen
+        urlopen("http://127.0.0.1:%d/health" % port, timeout=2).read()
+    except Exception:
+        print("  ⚠️  Sunucu kapalı. Önce: python kur.py sunucu")
+        return 1
+    print("  Tünel açılıyor (ssh — ek program gerekmez)…")
+    adres, tip = _ssh_tunel_ac(port)
+    if not adres:
+        print("  ❌ Tünel açılamadı. İnternet bağlantınızı kontrol edin.")
+        print("     Alternatif: aynı Wi-Fi'daki cihaz için")
+        print("     192.168.x.x:%d/mcp adresini kullanın." % port)
+        return 1
+    tok = ""
+    try:
+        tok = open(TOKEN_FILE, encoding="utf-8").read().strip()
+    except Exception:
+        pass
+    print("")
+    print("  ✅ Tünel hazır (%s)" % tip)
+    print("     ChatGPT'ye yapıştırılacak adres:")
+    print("     %s?token=%s" % (adres, tok))
+    print("")
+    print("  Kapatmak için: python ghostpilot.py tunel-kapat")
+    return 0
+
+
+def _ssh_tunel_ac(port):
+    """Ücretsiz, hesapsız SSH tünelleri. Başarılı olanın adresini döndürür."""
+    import re
+    import shutil
+    import subprocess as sp
+    import tempfile
+    ssh = shutil.which("ssh")
+    if not ssh:
+        return "", ""
+    secenekler = ["-o", "StrictHostKeyChecking=no", "-o", "ServerAliveInterval=20",
+                  "-o", "ExitOnForwardFailure=yes", "-o", "BatchMode=yes",
+                  "-o", "ConnectTimeout=15", "-n"]
+    denemeler = [
+        ("pinggy", secenekler + ["-p", "443", "-R0:127.0.0.1:%d" % port, "a.pinggy.io"],
+         r"https://[a-z0-9-]+\.(?:free\.pinggy\.net|run\.pinggy-free\.link|pinggy\.link)"),
+        ("localhost.run", secenekler + ["-R", "80:127.0.0.1:%d" % port, "nokey@localhost.run"],
+         r"https://[a-z0-9-]+\.lhr\.life"),
+    ]
+    for ad, komut, kalip in denemeler:
+        try:
+            cikti = tempfile.NamedTemporaryFile(delete=False, suffix=".tun")
+            cikti.close()
+            f = open(cikti.name, "wb")
+            p = sp.Popen([ssh] + komut, stdout=f, stderr=sp.STDOUT,
+                         stdin=sp.DEVNULL)
+            bulundu = ""
+            for _ in range(40):
+                time.sleep(0.5)
+                try:
+                    with open(cikti.name, "r", errors="replace") as r:
+                        t = r.read()
+                except Exception:
+                    t = ""
+                m = re.search(kalip, t)
+                if m:
+                    bulundu = m.group(0)
+                    break
+                if p.poll() is not None:
+                    break
+            if bulundu:
+                return bulundu + "/mcp", ad
+            try:
+                p.kill()
+            except Exception:
+                pass
+        except Exception:
+            continue
+    return "", ""
 
 
 def main():
@@ -4411,6 +4531,10 @@ def main():
             f.write(t)
         print(f"\n  ✅ Yeni anahtar: {t}\n     Dosya: {TOKEN_FILE}\n")
         return 0
+    if cmd in ("tunel-ac", "tunnel-ac", "tunel"):
+        return _tunel_konsol(True)
+    if cmd in ("tunel-kapat", "tunnel-off", "tunel-kapat)"):
+        return _tunel_konsol(False)
     if cmd == "where":
         print(f"\n  ayar : {CFG_FILE}\n  token: {TOKEN_FILE}\n  kayıt: {os.path.join(CFG_DIR, 'audit.log')}\n")
         return 0

@@ -37,7 +37,7 @@ Aşağıdakiler yasaktır:
 
 ## 5. Üçüncü taraf hizmetler
 
-GhostPilot ChatGPT, Claude, Tailscale, Telegram gibi üçüncü taraf hizmetlerle
+GhostPilot ChatGPT, Claude, Telegram gibi üçüncü taraf hizmetlerle
 çalışabilir. Bu hizmetlerin kendi şartları ve gizlilik politikaları geçerlidir.
 BTM Code bu hizmetlerin davranışından sorumlu değildir.
 

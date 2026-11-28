@@ -10,7 +10,7 @@
 #      kurulum.sh    → Linux / macOS (çift tık / ./kurulum.sh)
 #      python setup.py  → üçünde de elle
 #
-#  Adımlar: 0 algıla · 1 Python · 2 pip+Pillow · 3 Tailscale · 4 yapılandırma
+#  Adımlar: 0 algıla · 1 Python · 2 pip+Pillow · 3 tünel · 4 yapılandırma
 #           5 sunucu · 6 otomatik başlatma · 7 özet
 # ============================================================================
 
@@ -42,9 +42,6 @@ PY_SURUM = "3.13.7"
 URL = {
     "py_win": f"https://www.python.org/ftp/python/{PY_SURUM}/python-{PY_SURUM}-amd64.exe",
     "py_mac": f"https://www.python.org/ftp/python/{PY_SURUM}/python-{PY_SURUM}-macos11.pkg",
-    "ts_win": "https://pkgs.tailscale.com/stable/tailscale-setup-latest-amd64.msi",
-    "ts_mac": "https://pkgs.tailscale.com/stable/Tailscale-latest-macos.pkg",
-    "ts_sh": "https://tailscale.com/install.sh",
     "pip": "https://bootstrap.pypa.io/get-pip.py",
 }
 GECICI = os.environ.get("TEMP") or os.environ.get("TMPDIR") or "/tmp"
@@ -233,68 +230,8 @@ def pillow_kur(py_cmd):
 
 
 # ===========================================================================
-#  3 · TAILSCALE
+#  3 · TÜNEL (ssh — ek program yok)
 # ===========================================================================
-def tailscale_bin():
-    p = shutil.which("tailscale")
-    if p:
-        return p
-    if IS_WIN:
-        for c in (r"C:\Program Files\Tailscale\tailscale.exe",
-                  r"C:\Program Files (x86)\Tailscale\tailscale.exe"):
-            if os.path.exists(c):
-                return c
-    if IS_MAC and os.path.exists("/Applications/Tailscale.app/Contents/MacOS/Tailscale"):
-        return "/Applications/Tailscale.app/Contents/MacOS/Tailscale"
-    return None
-
-
-def tailscale_kur(s):
-    if tailscale_bin():
-        return True
-    say("     Tailscale yok (ChatGPT bağlantısı bunu kullanır) → kuruluyor…", "warn")
-    try:
-        if IS_WIN:
-            hedef = os.path.join(GECICI, "tailscale-setup.msi")
-            _indir(URL["ts_win"], hedef, 40)
-            say("     ⚙️  kuruluyor — Windows izin penceresinde 'Evet'…")
-            subprocess.run(["msiexec", "/i", hedef, "/qn", "/norestart"], timeout=1800)
-            _sil(hedef)
-        elif IS_MAC:
-            hedef = os.path.join(GECICI, "tailscale.pkg")
-            _indir(URL["ts_mac"], hedef, 45)
-            say("     ⚙️  kuruluyor — macOS parolanızı sorabilir…")
-            _sudo(["installer", "-pkg", hedef, "-target", "/"])
-            _sil(hedef)
-        else:
-            # Linux: resmî betik
-            betik = os.path.join(GECICI, "ts-install.sh")
-            _indir(URL["ts_sh"], betik, 1)
-            _sudo(["sh", betik])
-            _sil(betik)
-    except Exception as e:
-        say(f"     ❌ {e}", "err")
-        say("     Elle: https://tailscale.com/download", "warn")
-        return False
-
-    if not tailscale_bin():
-        say("     ⚠️  Tailscale kurulumu tamamlanmadı.", "warn")
-        say("         Elle: https://tailscale.com/download", "warn")
-        return False
-    say("     ✅ Tailscale kuruldu", "ok")
-    # giriş: mümkünse pencere/tarayıcı açılır — kullanıcı hesabıyla girer
-    try:
-        say("     🔑 Giriş yapmanız istenecek (Google/Microsoft). Tarayıcı açılabilir.", "warn")
-        ts = tailscale_bin()
-        if IS_MAC:
-            subprocess.Popen(["open", "-a", "Tailscale"])
-        else:
-            subprocess.Popen([ts, "up"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except Exception:
-        pass
-    return True
-
-
 # ===========================================================================
 #  yardımcılar
 # ===========================================================================
@@ -402,14 +339,13 @@ def main(argv=None):
     say(f"     {'✅' if ok_pip else '⚠️ '} pip  ·  "
         f"{'✅ Pillow ' + pv if pv else '⚠️  Pillow yok'}", "ok" if (ok_pip and pv) else "warn")
 
-    # 3 — Tailscale
-    adim("4", "Tailscale (ChatGPT için güvenli tünel)")
-    ok_ts = tailscale_kur(s)
-    if ok_ts:
-        say("     ✅ hazır", "ok")
+    # 3 — Tünel (ssh; ek program GEREKMEZ)
+    adim("4", "HTTPS tüneli (ssh — ek program gerekmez)")
+    import shutil as _sh
+    if _sh.which("ssh"):
+        say("     hazır — tünel kurulum sonrası tek komutla açılır", "ok")
     else:
-        say("     ⚠️  yok — ChatGPT bağlantısı kurulamaz, Claude/Cursor çalışır", "warn")
-        basarili = False
+        say("     ssh yok — yerel ağ (192.168.x.x) kullanılabilir", "warn")
 
     # 4 — Yapılandırma + erişim anahtarı (kur.py yapar)
     adim("5", "Yapılandırma · sunucu · otomatik başlatma")

@@ -13,7 +13,7 @@ GhostPilot connects ChatGPT, Claude, Cursor and any MCP-compatible assistant to 
 
 ## Badges
 
-![Version](https://img.shields.io/badge/version-5.23.0-22d3ee)
+![Version](https://img.shields.io/badge/version-5.24.0-22d3ee)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![Tools](https://img.shields.io/badge/tools-44-f59e0b)
@@ -29,7 +29,7 @@ GhostPilot connects ChatGPT, Claude, Cursor and any MCP-compatible assistant to 
 
 GhostPilot is a local **MCP (Model Context Protocol) server**. It runs on your computer and gives your chat assistant 44 real tools: files, terminal, screen, mouse and keyboard — plus an on-screen ghost cursor so you can see exactly what is happening.
 
-**Nothing leaves your machine.** The assistant connects directly to `localhost` (or through an optional Tailscale tunnel for phone access). No third-party cloud, no telemetry, no account.
+**Nothing leaves your machine.** The assistant connects directly to `localhost` (or through an optional free tunnel for phone access). No third-party cloud, no telemetry, no account.
 
 ## Why not a cloud agent?
 
@@ -43,7 +43,11 @@ GhostPilot is a local **MCP (Model Context Protocol) server**. It runs on your c
 
 ## Features
 
-- **47 tools** — read/write/edit files, glob, grep, shell, processes, screenshots, click, drag, type, hotkeys, clipboard, windows, documents (docx/xlsx/pptx/pdf), scheduled tasks
+- **50 tools** — read/write/edit files, glob, grep, shell, processes, screenshots, click, drag, type, hotkeys, clipboard, windows, documents (docx/xlsx/pptx/pdf), scheduled tasks
+- **No approvals** — the assistant never stops to ask; every step runs straight away
+- **Machine-language eyes** — `gozle` lists windows, buttons and fields with coordinates as text, so the model reads a short list instead of a picture (about 20× less data, no guessing)
+- **One call, many steps** — `sira` runs up to 40 actions in a single request: a 10-step task costs one turn instead of ten
+- **Zero-setup tunnel** — the HTTPS address is created with the `ssh` already on your machine; no extra program, no account, no sign-up
 - **Visible agent** — a ghost cursor shows where the work happens; your own mouse never moves. The ghost cursor fades out by itself **5 seconds** after the last action
 - **Fast** — a click takes under 0.1 s, a screenshot about 15 ms, typing has no artificial delay
 - **Virtual computer mode** — one command gives the assistant its own sandbox: its own folder, its own cursor, its own screen area. Unlimited inside that box, unchanged rules on your real machine
@@ -98,7 +102,7 @@ A panel opens. Keep it running while you work.
    - **Authentication:** `No authentication` (local) or `API key` → paste the access key from the panel
 4. Save, then start a chat and ask: *"What can you do on my computer?"*
 
-> **Using ChatGPT on the web (not desktop)?** `127.0.0.1` on a website points to OpenAI's server, not your PC. Use the Tailscale tunnel GhostPilot offers (`python kur.py tunel`) and paste the public HTTPS address instead.
+> **Using ChatGPT on the web (not desktop)?** `127.0.0.1` on a website points to OpenAI's server, not your PC. Use the free tunnel GhostPilot offers (`python kur.py tunel`) and paste the public HTTPS address instead.
 
 #### Claude Desktop
 
@@ -230,7 +234,7 @@ See [SECURITY.md](SECURITY.md) · [PRIVACY](GIZLILIK.md) · [TERMS](KOSULLAR.md)
 
 **Will it do something without asking?** Only read-only actions. Deleting, shell commands and screen clicks ask first (unless you change the mode).
 
-**Can I use it from my phone?** Yes, with Tailscale: `python kur.py tunel` gives a private HTTPS address.
+**Can I use it from my phone?** Yes: `python kur.py tunel` gives you a free HTTPS address.
 
 **Is there a subscription?** No. Free plan, forever. A support key is a donation-based extra, not a requirement.
 
@@ -283,7 +287,11 @@ GhostPilot, bilgisayarınızda çalışan yerel bir **MCP sunucusudur**. ChatGPT
 
 ## Özellikler
 
-- **47 araç** — dosya okuma/yazma/düzenleme, glob, grep, terminal, süreçler, ekran görüntüsü, tıklama, sürükleme, yazma, kısayol tuşları, pano, pencereler, belgeler (docx/xlsx/pptx/pdf), zamanlanmış görevler
+- **50 araç** — dosya okuma/yazma/düzenleme, glob, grep, terminal, süreçler, ekran görüntüsü, tıklama, sürükleme, yazma, kısayol tuşları, pano, pencereler, belgeler (docx/xlsx/pptx/pdf), zamanlanmış görevler
+- **Onay yok** — asistan hiçbir adımda durup sormaz, her iş doğrudan yürür
+- **Makine dilinde gözler** — `gozle` pencereleri, düğmeleri ve yazı alanlarını koordinatlarıyla metin olarak verir: model resim yerine kısa bir liste okur (yaklaşık 20 kat az veri, tahmin yok)
+- **Tek çağrıda çok adım** — `sira` tek istekte 40 adım çalıştırır: 10 adımlık iş 10 tur yerine 1 turda biter
+- **Sıfır kurulum tünel** — HTTPS adresi, bilgisayarınızda hazır olan `ssh` ile açılır; ek program, hesap, kayıt gerekmez
 - **Görünür ajan** — hayalet imleç işin nerede olduğunu gösterir; sizin fareniz oynamaz. İmleç son işlemden **5 saniye** sonra kendiliğinden kaybolur
 - **Hızlı** — bir tıklama 0,1 saniyeden kısa, ekran görüntüsü yaklaşık 15 milisaniye, yazmada yapay bekleme yok
 - **Sanal bilgisayar** — tek komutla ajanın kendi kutusu: kendi klasörü, kendi imleci, kendi ekran alanı. O kutunun içinde sınırsız yetki, gerçek bilgisayarınızda hiçbir şey değişmez
@@ -338,7 +346,7 @@ Bir panel açılır. Çalışırken açık kalsın.
    - **Kimlik doğrulama:** `Kimlik doğrulama yok` (yerel) veya `API anahtarı` → paneldeki erişim anahtarını yapıştırın
 4. Kaydedin, yeni sohbet açın ve sorun: *"Bilgisayarımda neler yapabilirsin?"*
 
-> **ChatGPT'yi tarayıcıda kullanıyorsanız:** `127.0.0.1` web sitesinde OpenAI'nin sunucusunu gösterir, sizin PC'nizi değil. GhostPilot'un sunduğu Tailscale tünelini açın (`python kur.py tunel`) ve size verilen HTTPS adresini yapıştırın.
+> **ChatGPT'yi tarayıcıda kullanıyorsanız:** `127.0.0.1` web sitesinde OpenAI'nin sunucusunu gösterir, sizin PC'nizi değil. GhostPilot'un sunduğu ücretsiz tüneli açın (`python kur.py tunel`) ve size verilen HTTPS adresini yapıştırın.
 
 #### Claude Desktop
 
@@ -485,7 +493,7 @@ Bkz. [GIZLILIK.md](GIZLILIK.md) · [KOSULLAR.md](KOSULLAR.md)
 
 **Sormadan bir şey yapar mı?** Yalnız okuma işlemleri. Silme, terminal ve ekran tıklamaları önce onay ister (modu değiştirmediyseniz).
 
-**Telefonumdan kullanabilir miyim?** Evet, Tailscale ile: `python kur.py tunel` size özel bir HTTPS adresi verir.
+**Telefonumdan kullanabilir miyim?** Evet: `python kur.py tunel` size ücretsiz bir HTTPS adresi verir.
 
 **Abonelik var mı?** Yok. Ücretsiz plan süresiz. Destek anahtarı bağışa dayalı bir ekstra, zorunluluk değil.
 
@@ -588,7 +596,7 @@ Ein Fenster öffnet sich. Lassen Sie es beim Arbeiten offen.
    - **Authentifizierung:** `Keine Authentifizierung` (lokal) oder `API-Schlüssel` → Zugangsschlüssel aus dem Panel einfügen
 4. Speichern, neuen Chat starten und fragen: *„Was kannst du auf meinem Computer tun?"*
 
-> **ChatGPT im Browser?** `127.0.0.1` zeigt dort auf OpenAIs Server, nicht auf Ihren PC. Nutzen Sie den Tailscale-Tunnel (`python kur.py tunel`) und die öffentliche HTTPS-Adresse.
+> **ChatGPT im Browser?** `127.0.0.1` zeigt dort auf OpenAIs Server, nicht auf Ihren PC. Nutzen Sie den kostenlosen Tunnel (`python kur.py tunel`) und die öffentliche HTTPS-Adresse.
 
 #### Claude Desktop
 
@@ -722,7 +730,7 @@ python kur.py basla
    - **Autenticación:** `Sin autenticación` (local) o `Clave API` → pega la clave del panel
 4. Guarda, abre un chat nuevo y pregunta: *«¿Qué puedes hacer en mi ordenador?»*
 
-> **¿ChatGPT en el navegador?** `127.0.0.1` apunta al servidor de OpenAI, no a tu PC. Usa el túnel de Tailscale (`python kur.py tunel`) y la dirección HTTPS pública.
+> **¿ChatGPT en el navegador?** `127.0.0.1` apunta al servidor de OpenAI, no a tu PC. Usa el túnel gratuito (`python kur.py tunel`) y la dirección HTTPS pública.
 
 #### Claude Desktop
 
@@ -845,7 +853,7 @@ python kur.py basla
    - **身份验证：** `无身份验证`（本地）或 `API 密钥` → 粘贴面板中的访问密钥
 4. 保存后开始新对话并提问：*「你能在我的电脑上做什么？」*
 
-> **在浏览器中使用 ChatGPT？** 在网页中 `127.0.0.1` 指向 OpenAI 的服务器，而不是你的电脑。请使用 Tailscale 隧道（`python kur.py tunel`）提供的 HTTPS 地址。
+> **在浏览器中使用 ChatGPT？** 在网页中 `127.0.0.1` 指向 OpenAI 的服务器，而不是你的电脑。请使用免费隧道（`python kur.py tunel`）提供的 HTTPS 地址。
 
 #### Claude Desktop
 
@@ -964,7 +972,7 @@ python kur.py basla
    - **認証:** `認証なし`（ローカル）または `API キー` → パネルのアクセスキーを貼り付け
 4. 保存して新しいチャットを開き、尋ねてください: *「このパソコンで何ができる？」*
 
-> **ブラウザ版 ChatGPT の場合:** ウェブページ上の `127.0.0.1` は OpenAI のサーバーを指します。Tailscale トンネル（`python kur.py tunel`）の HTTPS アドレスを使用してください。
+> **ブラウザ版 ChatGPT の場合:** ウェブページ上の `127.0.0.1` は OpenAI のサーバーを指します。無料トンネル（`python kur.py tunel`）の HTTPS アドレスを使用してください。
 
 #### Claude Desktop
 
