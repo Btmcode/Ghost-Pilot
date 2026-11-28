@@ -1,13 +1,13 @@
 {
   "name": "ghostpilot",
   "title": "GhostPilot",
-  "version": "5.19.0",
+  "version": "5.20.0",
   "description": "Your real computer, not a sandbox. 44 tools — files, terminal, screen, scheduling. No cloud, no telemetry.",
   "developer": "BtmCode",
   "author": {
     "name": "BtmCode",
     "fullName": "Ömer Zirve",
-    "email": "btmcode@outlook.com",
+    "email": "devcloudpy@gmail.com",
     "url": "https://github.com/Btmcode"
   },
   "license": "MIT",
@@ -33,7 +33,7 @@
     "privacy": "https://github.com/Btmcode/Ghost-Pilot/blob/main/GIZLILIK.md",
     "terms": "https://github.com/Btmcode/Ghost-Pilot/blob/main/KOSULLAR.md",
     "support": "https://buymeacoffee.com/btmcode",
-    "email": "btmcode@outlook.com"
+    "email": "devcloudpy@gmail.com"
   },
   "pricing": {
     "free": "20.000 calls / month",

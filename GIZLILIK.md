@@ -78,7 +78,9 @@ Bu politika güncellenirse değişiklik tarihi yukarıda güncellenir ve depoda
 
 ## 8. İletişim
 
-Sorularınız için GitHub üzerinden konu açın:
+**E-posta:** [devcloudpy@gmail.com](mailto:devcloudpy@gmail.com)
+
+Sorularınız için GitHub üzerinden de konu açabilirsiniz:
 [github.com/Btmcode/Ghost-Pilot/issues](https://github.com/Btmcode/Ghost-Pilot/issues)
 
 ---

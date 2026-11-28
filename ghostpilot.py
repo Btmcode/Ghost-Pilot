@@ -132,7 +132,7 @@ if sys.platform.startswith("win"):
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
-VERSION = "5.19.0"
+VERSION = "5.20.0"
 
 # Windows konsolu varsayılan olarak cp1254/cp1252 kullanır ve emoji yazınca
 # UnicodeEncodeError ile çöker. Hem kendimiz hem alt süreçler için UTF-8'e geç.
@@ -2462,7 +2462,7 @@ def onay_listesi():
 # --- geliştirici kimliği (mağaza/eklenti kartlarında görünen bilgi) ---
 GELISTIRICI = "BtmCode"
 GELISTIRICI_TAM = "Ömer Zirve"
-GELISTIRICI_EPOSTA = "btmcode@outlook.com"
+GELISTIRICI_EPOSTA = "devcloudpy@gmail.com"
 
 DESTEK_URL = "https://buymeacoffee.com/btmcode"      # donate / bağış
 SITE_URL = "https://btmcode.vercel.app"

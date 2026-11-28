@@ -611,7 +611,7 @@ class Panel:
             ("Koşullar", "Kullanım koşulları",
              "https://github.com/Btmcode/Ghost-Pilot/blob/main/KOSULLAR.md"),
             ("Blog", "mnemark.blogspot.com", "https://mnemark.blogspot.com"),
-            ("E-posta", "btmcode@outlook.com", "mailto:btmcode@outlook.com"),
+            ("E-posta", "devcloudpy@gmail.com", "mailto:devcloudpy@gmail.com"),
         ]
         for etiket, deger, url in linkler:
             r = tk.Frame(p, bg=ARKA)

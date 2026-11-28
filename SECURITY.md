@@ -12,7 +12,8 @@
 Please **do not** open a public issue for security problems.
 
 1. Open a [private security advisory](https://github.com/Btmcode/Ghost-Pilot/security/advisories/new), or
-2. Write to BTM Code through [btmcode.vercel.app](https://btmcode.vercel.app) and mention "GhostPilot security".
+2. E-mail **devcloudpy@gmail.com** with the subject "GhostPilot security",
+   or write through [btmcode.vercel.app](https://btmcode.vercel.app).
 
 You can expect a first reply within **72 hours**. Please include:
 

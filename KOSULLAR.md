@@ -60,8 +60,11 @@ mahkemeleri yetkilidir.
 
 ## 9. İletişim
 
+**E-posta:** [devcloudpy@gmail.com](mailto:devcloudpy@gmail.com)
+
 [github.com/Btmcode/Ghost-Pilot](https://github.com/Btmcode/Ghost-Pilot) ·
-[btmcode.vercel.app](https://btmcode.vercel.app)
+[btmcode.vercel.app](https://btmcode.vercel.app) ·
+[Bağış: buymeacoffee.com/btmcode](https://buymeacoffee.com/btmcode)
 
 ---
 

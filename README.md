@@ -13,7 +13,7 @@ GhostPilot connects ChatGPT, Claude, Cursor and any MCP-compatible assistant to 
 
 ## Badges
 
-![Version](https://img.shields.io/badge/version-5.19.0-22d3ee)
+![Version](https://img.shields.io/badge/version-5.20.0-22d3ee)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![Tools](https://img.shields.io/badge/tools-44-f59e0b)
@@ -232,6 +232,7 @@ python kur.py basla
 |---|---|
 | ☕ Buy me a coffee | [buymeacoffee.com/btmcode](https://buymeacoffee.com/btmcode) |
 | 🌐 Website | [btmcode.vercel.app](https://btmcode.vercel.app) |
+| ✉️ E-mail | [devcloudpy@gmail.com](mailto:devcloudpy@gmail.com) |
 | 💬 Issues | [GitHub Issues](https://github.com/Btmcode/Ghost-Pilot/issues) |
 
 ## License
@@ -448,6 +449,7 @@ python kur.py basla
 |---|---|
 | ☕ Bir kahve | [buymeacoffee.com/btmcode](https://buymeacoffee.com/btmcode) |
 | 🌐 Web sitesi | [btmcode.vercel.app](https://btmcode.vercel.app) |
+| ✉️ E-posta | [devcloudpy@gmail.com](mailto:devcloudpy@gmail.com) |
 | 💬 Sorunlar | [GitHub Issues](https://github.com/Btmcode/Ghost-Pilot/issues) |
 
 ## Lisans
