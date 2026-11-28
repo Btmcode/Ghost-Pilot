@@ -48,14 +48,22 @@ def _pil():
 #  YAKALAMA
 # ============================================================================
 
-def _to_jpeg(img, max_width=None, quality=72):
-    """PIL Image → JPEG bytes (ölçeklenmiş)."""
+def _to_jpeg(img, max_width=None, quality=68):
+    """PIL Image → JPEG bytes (ölçeklenmiş).
+
+    HIZ NOTU: optimize=True Huffman tablolarını yeniden hesaplar ve yaklaşık
+    %30-40 yavaşlatır. Ekran görüntüsünde boyut farkı küçük olduğu için
+    kapalı. LANCZOS yerine BILINEAR: gözle fark yok, 2-3 kat hızlı.
+    """
     Image, _ = _pil()
     if max_width and img.width > max_width:
         h = int(img.height * max_width / img.width)
-        img = img.resize((max_width, h), Image.LANCZOS)
+        try:
+            img = img.resize((max_width, h), Image.BILINEAR)
+        except Exception:
+            img = img.resize((max_width, h))
     buf = io.BytesIO()
-    img.convert("RGB").save(buf, format="JPEG", quality=quality, optimize=True)
+    img.convert("RGB").save(buf, format="JPEG", quality=quality)
     return buf.getvalue()
 
 
@@ -86,7 +94,15 @@ def _grab_pil(region=None):
             w, h = int(region.get("w", 0)), int(region.get("h", 0))
             if w > 0 and h > 0:
                 box = (x, y, x + w, y + h)
-        return ImageGrab.grab(bbox=box, all_screens=True)
+        # all_screens pahalı; tek monitör varsa hızlı yolu kullan
+        try:
+            import ctypes
+            n = ctypes.windll.user32.GetSystemMetrics(80) if IS_WIN else 1
+        except Exception:
+            n = 1
+        if n and int(n) > 1:
+            return ImageGrab.grab(bbox=box, all_screens=True)
+        return ImageGrab.grab(bbox=box)
     except TypeError:
         try:
             return ImageGrab.grab(bbox=box)
@@ -450,14 +466,13 @@ def click(x, y, button="left", double=False):
     if IS_WIN:
         _win_init()
         ctypes.windll.user32.SetCursorPos(int(x), int(y))
-        time.sleep(0.02)
         flags = {"left": (0x0002, 0x0004), "right": (0x0008, 0x0010),
                  "middle": (0x0020, 0x0040)}[button]
         for _ in range(2 if double else 1):
             _win_mouse(flags[0])
-            time.sleep(0.03)
             _win_mouse(flags[1])
-            time.sleep(0.05 if double else 0)
+            if double:
+                time.sleep(0.01)
         return {"ok": True, "x": int(x), "y": int(y), "button": button,
                 "double": bool(double), "backend": "user32"}
     if IS_MAC and _quartz():
@@ -472,7 +487,6 @@ def click(x, y, button="left", double=False):
                 "double": bool(double), "backend": "quartz"}
     if IS_LINUX and _x11():
         move(x, y)
-        time.sleep(0.03)
         try:
             for _ in range(2 if double else 1):
                 _X["xtst"].XTestFakeButtonEvent(ctypes.c_void_p(_X["dpy"]),
@@ -482,7 +496,8 @@ def click(x, y, button="left", double=False):
                                                 ctypes.c_uint(btn), ctypes.c_int(0),
                                                 ctypes.c_ulong(0))
                 _xflush()
-                time.sleep(0.05)
+                if double:
+                    time.sleep(0.02)
             return {"ok": True, "x": int(x), "y": int(y), "button": button,
                     "double": bool(double), "backend": "xtest"}
         except Exception as e:
@@ -495,11 +510,11 @@ def drag(x1, y1, x2, y2):
     time.sleep(0.05)
     if IS_WIN:
         _win_mouse(0x0002)
-        for i in range(1, 21):
-            nx = int(x1 + (x2 - x1) * i / 20)
-            ny = int(y1 + (y2 - y1) * i / 20)
+        for i in range(1, 9):
+            nx = int(x1 + (x2 - x1) * i / 8)
+            ny = int(y1 + (y2 - y1) * i / 8)
             ctypes.windll.user32.SetCursorPos(nx, ny)
-            time.sleep(0.012)
+            time.sleep(0.006)
         _win_mouse(0x0004)
         return {"ok": True, "from": [int(x1), int(y1)], "to": [int(x2), int(y2)],
                 "backend": "user32"}
@@ -610,7 +625,8 @@ def type_text(text):
                 _x_press_keycode(kc, True)
                 _x_press_keycode(kc, False)
                 ok += 1
-                time.sleep(0.006)
+                # HIZ: tek karakterde bile bekleme yok; X sunucusu sırayı korur
+        _xflush()
         return {"ok": ok > 0, "typed": ok, "backend": "xtest",
                 **({} if ok else {"error": "Karakterler tuş eşlemesine çevrilemedi (klavye düzeni?)."})}
     return {"ok": False, "error": "Metin yazma kullanılamıyor."}

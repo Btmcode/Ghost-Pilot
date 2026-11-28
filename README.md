@@ -13,7 +13,7 @@ GhostPilot connects ChatGPT, Claude, Cursor and any MCP-compatible assistant to 
 
 ## Badges
 
-![Version](https://img.shields.io/badge/version-5.22.0-22d3ee)
+![Version](https://img.shields.io/badge/version-5.23.0-22d3ee)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![Tools](https://img.shields.io/badge/tools-44-f59e0b)
@@ -43,8 +43,11 @@ GhostPilot is a local **MCP (Model Context Protocol) server**. It runs on your c
 
 ## Features
 
-- **44 tools** — read/write/edit files, glob, grep, shell, processes, screenshots, click, drag, type, hotkeys, clipboard, windows, documents (docx/xlsx/pptx/pdf), scheduled tasks
-- **Visible agent** — a ghost cursor shows where the work happens; your own mouse never moves
+- **47 tools** — read/write/edit files, glob, grep, shell, processes, screenshots, click, drag, type, hotkeys, clipboard, windows, documents (docx/xlsx/pptx/pdf), scheduled tasks
+- **Visible agent** — a ghost cursor shows where the work happens; your own mouse never moves. The ghost cursor fades out by itself **5 seconds** after the last action
+- **Fast** — a click takes under 0.1 s, a screenshot about 15 ms, typing has no artificial delay
+- **Virtual computer mode** — one command gives the assistant its own sandbox: its own folder, its own cursor, its own screen area. Unlimited inside that box, unchanged rules on your real machine
+- **Find and click** — `ui_click "Save"` finds the button by its text and clicks it in a single call (no coordinate guessing)
 - **Approval screen** — risky actions (delete, shell) wait for your click
 - **Read-only mode** — one switch, nothing can be changed
 - **Works alongside you** — the assistant types while you keep working
@@ -167,6 +170,25 @@ The counter resets on the **1st of each month, 00:00 UTC**. At **80%** you get a
 
 > GhostPilot is donation-funded, not sold. A support key unlocks unlimited calls; it is never required to keep using the free plan. For comparison: Desktop Commander gives 10,000 calls/month and charges $20/month for unlimited. GhostPilot gives **twice the free calls at half the price**.
 
+## Virtual computer (its own box)
+
+Want the assistant to work without touching your real files? One line:
+
+```
+python kur.py sanal ac
+```
+
+| | Real machine | Virtual computer on |
+|---|---|---|
+| Files | Your folders | Only `~\.ghostpilot\sanal` |
+| Mouse | Yours (protected) | Its own ghost cursor, top-left half |
+| Approval | Asked for risky actions | Not asked — free inside the box |
+| Your files | Open | **Untouched** |
+
+Turn it off: `python kur.py sanal kapat` · Status: `python kur.py sanal`
+
+The ghost cursor also disappears by itself **5 seconds** after the last action, so your screen stays clean.
+
 ## Configuration
 
 Settings live in `~/.ghostpilot/config.json`:
@@ -261,8 +283,11 @@ GhostPilot, bilgisayarınızda çalışan yerel bir **MCP sunucusudur**. ChatGPT
 
 ## Özellikler
 
-- **44 araç** — dosya okuma/yazma/düzenleme, glob, grep, terminal, süreçler, ekran görüntüsü, tıklama, sürükleme, yazma, kısayol tuşları, pano, pencereler, belgeler (docx/xlsx/pptx/pdf), zamanlanmış görevler
-- **Görünür ajan** — hayalet imleç işin nerede olduğunu gösterir; sizin fareniz oynamaz
+- **47 araç** — dosya okuma/yazma/düzenleme, glob, grep, terminal, süreçler, ekran görüntüsü, tıklama, sürükleme, yazma, kısayol tuşları, pano, pencereler, belgeler (docx/xlsx/pptx/pdf), zamanlanmış görevler
+- **Görünür ajan** — hayalet imleç işin nerede olduğunu gösterir; sizin fareniz oynamaz. İmleç son işlemden **5 saniye** sonra kendiliğinden kaybolur
+- **Hızlı** — bir tıklama 0,1 saniyeden kısa, ekran görüntüsü yaklaşık 15 milisaniye, yazmada yapay bekleme yok
+- **Sanal bilgisayar** — tek komutla ajanın kendi kutusu: kendi klasörü, kendi imleci, kendi ekran alanı. O kutunun içinde sınırsız yetki, gerçek bilgisayarınızda hiçbir şey değişmez
+- **Bul ve tıkla** — `ui_click "Kaydet"` düğmeyi yazısından bulup tek çağrıda tıklar (koordinat tahmini yok)
 - **Onay ekranı** — riskli işlemler (silme, terminal) sizin onayınızı bekler
 - **Salt okunur mod** — tek anahtar, hiçbir şey değiştirilemez
 - **Sizinle birlikte çalışır** — siz çalışırken asistan da yazabilir
@@ -383,6 +408,41 @@ Sohbette normal cümleyle sorun:
 Sayaç **her ayın 1'inde 00:00 UTC** sıfırlanır. **%80**'e gelince panelde ve sohbette uyarı çıkar. İstediğiniz an *"Ne kadar kullanım hakkım kaldı?"* diye sorabilirsiniz.
 
 > GhostPilot bağışla sürdürülür, satılmaz. Destek anahtarı sınırsız çağrı açar; ücretsiz planı kullanmak için hiç gerekmez. Karşılaştırma: Desktop Commander ayda 10.000 çağrı verir, sınırsız için $20/ay ister. GhostPilot **iki kat ücretsiz çağrıyı yarı fiyata** verir.
+
+## Sanal bilgisayar (kendi kutusu)
+
+Ajanın gerçek dosyalarınıza hiç dokunmadan çalışmasını istiyorsanız:
+
+**Açmak için (tek satır):**
+
+```
+python kur.py sanal ac
+```
+
+**Ne olur?**
+
+| | Gerçek bilgisayar | Sanal bilgisayar açıkken |
+|---|---|---|
+| Dosyalar | Kendi klasörleriniz | Yalnız `C:\Users\<siz>\.ghostpilot\sanal` |
+| Fare | Sizin imleciniz (korumalı) | Ajanın kendi imleci, sol üst yarı |
+| Onay sorusu | Riskli işlemlerde sorulur | Sorulmaz — kutu içinde serbest |
+| Sizin dosyalarınız | Açık | **Dokunulmaz** |
+
+**Kapatmak için:** `python kur.py sanal kapat`
+**Durumu görmek için:** `python kur.py sanal`
+
+Sohbetten de açılabilir: *"sanal bilgisayarı aç"* → `sanal_mod` aracı.
+
+## Hız
+
+| İşlem | Süre |
+|---|---|
+| Tıklama | ~1 ms (ilk çağrı ~60 ms) |
+| Ekran görüntüsü (1024 px) | ~15 ms |
+| 130 karakter yazma | ~5 ms |
+| Düğmeyi bulup tıklama | tek çağrı |
+
+Ayarlar → `onay = kapali` yalnız sanal modda otomatik gevşer; gerçek makinede daima sorulur.
 
 ## Ayarlar
 

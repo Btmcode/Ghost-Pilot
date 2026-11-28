@@ -33,6 +33,9 @@ EFFECT = 300 if IS_WIN else 150
 RING_MAX = 118 if IS_WIN else 68
 ARROW_W, ARROW_H = 18, 26
 
+# Hayalet imleç son işlemden bu kadar saniye sonra KENDİLİĞİNDEN gizlenir
+OTO_GIZLE = 5.0
+
 _lock = threading.Lock()
 _state = {
     "ready": False,
@@ -43,6 +46,7 @@ _state = {
     "hud": "",
     "hud_until": 0.0,
     "quitting": False,
+    "son_dokunma": 0.0,
 }
 
 _root = None
@@ -125,6 +129,7 @@ class _Effect:
         self.win.geometry(f"{EFFECT}x{EFFECT}+{int(x) - h}+{int(y) - h}")
 
     def show(self, x, y, label=""):
+        _state["son_dokunma"] = time.time()
         self.place(x, y)
         self.cv.itemconfigure(self.arrow, state="normal")
         self.cv.itemconfigure(self.halo, state="normal")
@@ -137,6 +142,7 @@ class _Effect:
         self.cv.itemconfigure(self.halo, state="hidden")
 
     def ring(self, x, y):
+        _state["son_dokunma"] = time.time()
         cx = cy = EFFECT // 2
         for i in range(3):
             cid = self.cv.create_oval(cx - 3, cy - 3, cx + 3, cy + 3,
@@ -273,6 +279,12 @@ def _boot():
                     _state["hud_until"] = 0
                     if _hud:
                         _hud.hide()
+                # 5 saniye işlem yapılmadıysa hayalet imleci gizle
+                if (_state["cursor_on"] and _state["son_dokunma"] and
+                        time.time() - _state["son_dokunma"] > OTO_GIZLE):
+                    _state["cursor_on"] = False
+                    if _eff:
+                        _eff.hide()
             except Exception:
                 pass
             root.after(28, tick)
@@ -319,6 +331,7 @@ def ghost_show(x=None, y=None, label=""):
     if x is not None:
         _state["x"], _state["y"] = int(x), int(y)
     _state["cursor_on"] = True
+    _state["son_dokunma"] = time.time()
     if label:
         hud(label)
     return _ui(_eff.show, _state["x"], _state["y"], label)
@@ -336,6 +349,7 @@ def ghost_glide(x2, y2, label="", ms=280, steps=16):
     x1, y1 = _state["x"], _state["y"]
     x2, y2 = int(x2), int(y2)
     _state["cursor_on"] = True
+    _state["son_dokunma"] = time.time()
     for i in range(1, steps + 1):
         p = i / steps
         e = 1 - (1 - p) ** 2.4

@@ -34,7 +34,7 @@ IS_LINUX = OS_NAME == "Linux"
 # Kullanıcı son bu kadar saniye içinde girdi yaptıysa ajan bekler
 USER_IDLE_REQUIRED = 0.45
 # En fazla bu kadar bekler, sonra devam eder (kilitlenmesin)
-MAX_WAIT = 6.0
+MAX_WAIT = 2.0
 
 _lock = threading.Lock()
 _stats = {"waited": 0.0, "times": 0, "aborted": 0}
@@ -230,7 +230,6 @@ class CursorRestore:
             try:
                 import screen
                 screen.move(self.pos[0], self.pos[1])
-                time.sleep(0.01)
             except Exception:
                 pass
         return False
@@ -515,23 +514,25 @@ def bg_click(x, y, button="left", double=False, visible=True, label=""):
     """
     x, y = int(x), int(y)
     if visible:
+        # HIZ: gösterim ayrı iş parçacığında → tıklama animasyonu BEKLEMEZ.
+        # (Eskiden 280 ms kayma + 16 adım ana iş parçacığını kilitliyordu.)
         try:
             import goverlay
-            goverlay.ghost_glide(x, y, label=label or "tıklıyorum")
-            goverlay.click_ring(x, y, label=label or f"tıklıyorum · {button}")
+            threading.Thread(target=_goster,
+                             args=(x, y, label or "tıklıyorum", button),
+                             daemon=True).start()
         except Exception:
             pass
 
     if not IS_WIN:
         return _legacy_click(x, y, button, double)
 
-    u = _u32()
-    hwnd = window_at(x, y)
+    # HIZ: 3 saniyelik önbellekli window_at (fonksiyon ici)
+    hwnd = _hwnd_hizli(x, y)
     if not hwnd:
         return _legacy_click(x, y, button, double)
     # istemci koordinatına çevir
     try:
-        import ctypes
         pt = _POINT(x, y)
         u.ScreenToClient(hwnd, ctypes.byref(pt))
         cx, cy = pt.x, pt.y
@@ -553,6 +554,34 @@ def bg_click(x, y, button="left", double=False, visible=True, label=""):
         r = _legacy_click(x, y, button, double)
         r["fallback"] = str(e)[:80]
         return r
+
+
+def _goster(x, y, label, button):
+    """Hayalet imleç + halka — arka planda, girdiyi geciktirmez."""
+    try:
+        import goverlay
+        goverlay.ghost_glide(x, y, label=label, ms=120, steps=6)
+        goverlay.click_ring(x, y, label=f"{label} · {button}")
+    except Exception:
+        pass
+
+
+# --- HIZ: ctypes ve pencere önbelleği -------------------------------------
+_HWND_ONBELLEK = {}
+
+
+def _hwnd_hizli(x, y):
+    """window_at'i 3 sn önbelleğe al — her tıklamada pencere araması yapmaz."""
+    anahtar = (int(x) // 8, int(y) // 8)
+    simdi = time.time()
+    kayit = _HWND_ONBELLEK.get(anahtar)
+    if kayit and simdi - kayit[0] < 3.0:
+        return kayit[1]
+    hwnd = window_at(x, y)
+    if len(_HWND_ONBELLEK) > 512:
+        _HWND_ONBELLEK.clear()
+    _HWND_ONBELLEK[anahtar] = (simdi, hwnd)
+    return hwnd
 
 
 def _legacy_click(x, y, button, double):
@@ -578,7 +607,7 @@ _KEYMAP = {
 }
 
 
-def bg_type(text, visible=True, delay=0.012, hwnd=None):
+def bg_type(text, visible=True, delay=0.0, hwnd=None):
     """Odaklı pencereye yazar. Gerçek imleç yerinizde kalır.
 
     Windows: WM_CHAR doğrudan pencereye (PostMessage) → imleç oynamaz.
@@ -609,10 +638,15 @@ def bg_type(text, visible=True, delay=0.012, hwnd=None):
         except Exception as e:
             return {"ok": False, "error": str(e)}
     try:
-        for ch in str(text):
+        # HIZ: PostMessage kuyruğu kendi sırasını korur → karakter başına
+        # bekleme yok. Çok uzun metinde (1000+) nefes payı bırakılır.
+        uzun = len(str(text)) > 1000
+        for i, ch in enumerate(str(text)):
             u.PostMessageW(target, 0x0102, ord(ch), 1)    # WM_CHAR
             if delay:
                 time.sleep(delay)
+            elif uzun and i % 200 == 0:
+                time.sleep(0.02)
         return {"ok": True, "chars": len(str(text)),
                 "mode": "arka plan (imleç oynamadı)", "concurrent": True}
     except Exception as e:

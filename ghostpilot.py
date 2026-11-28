@@ -132,7 +132,7 @@ if sys.platform.startswith("win"):
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
-VERSION = "5.22.0"
+VERSION = "5.23.0"
 
 # Windows konsolu varsayılan olarak cp1254/cp1252 kullanır ve emoji yazınca
 # UnicodeEncodeError ile çöker. Hem kendimiz hem alt süreçler için UTF-8'e geç.
@@ -305,7 +305,23 @@ def _inside(path, roots):
     return False
 
 
+def _sanal():
+    try:
+        import sanaldunya
+        return sanaldunya
+    except Exception:
+        return None
+
+
 def check_read(path):
+    sd = _sanal()
+    if sd and sd.acik(CFG):
+        # SANAL BİLGİSAYAR: her yer serbest (yalnız sanal kök içinde)
+        if _inside(path, sd.kokler()):
+            return True, ""
+        # sanal kök dışına çıkmak istenirse sanal köke yönlendir
+        return False, ("Sanal bilgisayar modu açık — yalnız sanal klasörde "
+                       "çalışılır: %s" % sd.kok_klasor())
     if _inside(path, CFG.get("blocked_paths") or []):
         return False, "Bu yol engelli listesinde."
     if not _inside(path, CFG.get("read_roots") or [HOME]):
@@ -314,6 +330,12 @@ def check_read(path):
 
 
 def check_write(path):
+    sd = _sanal()
+    if sd and sd.acik(CFG):
+        if _inside(path, sd.kokler()):
+            return True, ""
+        return False, ("Sanal bilgisayar modu açık — yalnız sanal klasörde "
+                       "yazılabilir: %s" % sd.kok_klasor())
     if _inside(path, CFG.get("blocked_paths") or []):
         return False, "Bu yol engelli listesinde."
     if not _inside(path, CFG.get("write_roots") or [HOME]):
@@ -326,8 +348,11 @@ def check_write(path):
 # ============================================================================
 
 def caps():
+    sd = _sanal()
     c = {
         "os": OS_NAME,
+        "virtual_computer": bool(sd and sd.acik(CFG)),
+        "virtual_root": (sd.kok_klasor() if sd and sd.acik(CFG) else ""),
         "files": True,
         "shell": bool(CFG.get("allow_shell")),
         "screen": False,
@@ -767,14 +792,31 @@ def _screen_mod():
         return None
 
 
+_SHOT_CACHE = {"anahtar": None, "veri": None, "t": 0.0}
+_SHOT_KILIT = threading.Lock()
+
+
 def t_shot(a):
     m = _screen_mod()
     if not m or not CFG.get("allow_screen"):
         return {"ok": False, "error": "Ekran yakalama bu makinede kullanılamıyor.",
                 "hint": "python ghostpilot.py doctor → neden gösterilir."}
-    return m.screenshot(region=a.get("region"),
-                        max_width=int(a.get("max_width") or 1280),
-                        monitor=a.get("monitor"))
+    mw = int(a.get("max_width") or 1280)
+    anahtar = (str(a.get("region")), mw, str(a.get("monitor")))
+    # HIZ: 1.2 saniye içinde aynı istek gelirse tekrar yakalama (ağ/motor yükü azalır)
+    simdi = time.time()
+    with _SHOT_KILIT:
+        if (_SHOT_CACHE["anahtar"] == anahtar and
+                simdi - _SHOT_CACHE["t"] < 1.2 and _SHOT_CACHE["veri"]):
+            d = dict(_SHOT_CACHE["veri"])
+            d["cached"] = True
+            return d
+    r = m.screenshot(region=a.get("region"), max_width=mw,
+                     monitor=a.get("monitor"))
+    if isinstance(r, dict) and r.get("ok"):
+        with _SHOT_KILIT:
+            _SHOT_CACHE.update({"anahtar": anahtar, "veri": dict(r), "t": time.time()})
+    return r
 
 
 def _guard_input(fn, *args, force=False, restore=True, wait_for_user=False,
@@ -809,9 +851,26 @@ def _guard_input(fn, *args, force=False, restore=True, wait_for_user=False,
             pass
 
 
+def _sanal_sinir(x, y):
+    """Sanal modda koordinat sınır dışındaysa uyarı döner."""
+    sd = _sanal()
+    if not sd or not sd.acik(CFG):
+        return None
+    if sd.sinir_icinde(x, y):
+        return None
+    s = sd.ekran_siniri() or (0, 0, 0, 0)
+    return {"ok": False, "virtual_boundary": True,
+            "error": ("Sanal bilgisayar modu: ajan yalnız kendi ekran alanında "
+                      "çalışır (x 0-%d, y 0-%d). Gerçek imlecinize dokunmaz."
+                      % (s[2], s[3]))}
+
+
 def t_click(a):
     """Tıklar — SİZİNLE AYNI ANDA; gerçek imleciniz oynatılmaz."""
     x, y = int(a.get("x", 0)), int(a.get("y", 0))
+    hata = _sanal_sinir(x, y)
+    if hata:
+        return hata
     etiket = a.get("label") or "tıklıyorum"
     try:
         import input_bg
@@ -830,6 +889,9 @@ def t_click(a):
 
 def t_move_mouse(a):
     """Fareyi taşır (dosya taşımak için: t_move)."""
+    hata = _sanal_sinir(int(a.get("x", 0)), int(a.get("y", 0)))
+    if hata:
+        return hata
     m = _screen_mod()
     if not m or not CFG.get("allow_screen"):
         return {"ok": False, "error": "Girdi denetimi kullanılamıyor."}
@@ -856,8 +918,10 @@ def t_type(a):
     metin = str(a.get("text", ""))
     try:
         import input_bg
+        # HIZ: varsayılan gecikme 0 — ajan kelimeyi tek nefeste yazar.
+        # İsterseniz delay ile yavaşlatın (insan gibi yazsın).
         return input_bg.bg_type(metin, visible=not bool(a.get("sessiz")),
-                                delay=float(a.get("delay") or 0.012))
+                                delay=float(a.get("delay") or 0))
     except Exception as e:
         m = _screen_mod()
         if not m or not CFG.get("allow_screen"):
@@ -895,6 +959,47 @@ def _overlay_up():
         return goverlay.start(2.0)
     except Exception:
         return False
+
+
+def t_sanal_durum(a):
+    sd = _sanal()
+    if not sd:
+        return {"ok": False, "error": "sanaldunya modülü yok."}
+    d = sd.durum()
+    d["ok"] = True
+    return d
+
+
+def t_sanal_mod(a):
+    sd = _sanal()
+    if not sd:
+        return {"ok": False, "error": "sanaldunya modülü yok."}
+    if a.get("acik") is False:
+        sd.kapat()
+        return {"ok": True, "sanal": False,
+                "not": "Sanal mod kapandı — gerçek bilgisayar kuralları geçerli."}
+    if not sd.ac():
+        return {"ok": False, "error": "Açılamadı."}
+    return {"ok": True, "sanal": True, "kok": sd.kok_klasor(),
+            "not": ("Sanal bilgisayar açık: ajan yalnız bu klasörde çalışır, "
+                    "kendi imleci ve kendi ekran alanı var.")}
+
+
+def t_ui_click(a):
+    """Bir pencerede metni/düğmeyi bulup tıklar — tek adımda.
+
+    Ekran görüntüsü → yazı bul (OCR yoksa pencerede metin arama) →
+    merkeze tıkla. Koordinat hesaplamak için 3-4 tur sohbet gerekmez.
+    """
+    hedef = str(a.get("text") or "").strip()
+    if not hedef:
+        return {"ok": False, "error": "text parametresi gerekli (ör. 'Kaydet')."}
+    try:
+        import ui_bul
+    except Exception:
+        return {"ok": False, "error": "ui_bul modülü yok."}
+    return ui_bul.bul_ve_tikla(hedef, pencere=a.get("window"),
+                               bolge=a.get("region"))
 
 
 def t_ghost(a):
@@ -1352,6 +1457,14 @@ TOOLS = {
     "schedule_remove": (t_gorev_sil, "Zamanlanmış görevi siler.", {"name": {"type": "string"}}),
     "ghost": (t_ghost, "Ekranda görünür imleç/işaret gösterir — işlemin nerede olduğunu görürsünüz.", {"action": {"type": "string", "description": "goster | gizle | serit"}, "x": {"type": "integer"}, "y": {"type": "integer"}, "label": {"type": "string"}, "text": {"type": "string"}, "glide": {"type": "boolean"}, "seconds": {"type": "number"}}),
     "hud": (t_hud, "Ekranın altında 'şu an ne yapıyorum' şeridi gösterir.", {"text": {"type": "string"}, "seconds": {"type": "number"}}),
+    "sanal_durum": (t_sanal_durum, "Sanal bilgisayar modunun durumunu gösterir: "
+                                  "açık mı, sanal klasör nerede, ekran alanı ne?",
+                    {}),
+    "sanal_mod": (t_sanal_mod, "Sanal bilgisayar modunu açar/kapatır. Açıkken ajan "
+                               "yalnız sanal klasörde çalışır, kendi imlecini kullanır.",
+                  {"acik": {"type": "boolean"}}),
+    "ui_click": (t_ui_click, "Bir penceredeki düğmeyi/metni bulup tıklar; "
+                              "koordinat bilmeye gerek yok.", {"text": {"type": "string"}, "window": {"type": "string"}}),
     "screenshot": (t_shot, "Ekranı JPEG olarak yakalar (base64).", {"region": {"type": "object", "description": "{x,y,w,h}"}, "max_width": {"type": "integer"}, "monitor": {"type": "integer", "description": "1 = birincil, 2 = ikinci ekran…"}}),
     "click": (t_click, "Tıklar — SİZİNLE AYNI ANDA; gerçek imleciniz oynamaz, ekranda hayalet imleç görünür.", {"x": {"type": "integer"}, "y": {"type": "integer"}, "button": {"type": "string", "enum": ["left", "right", "middle"]}, "double": {"type": "boolean"}, "label": {"type": "string", "description": "ekranda görünecek açıklama"}, "sessiz": {"type": "boolean", "description": "hayalet imleci gösterme"}}, ["x", "y"]),
     "move_mouse": (t_move_mouse, "Fareyi koordinata taşır.", {"x": {"type": "integer"}, "y": {"type": "integer"}}, ["x", "y"]),
@@ -2389,7 +2502,14 @@ RISKLI_ARACLAR = {"delete", "move", "shell", "job_start", "write", "edit"}
 
 
 def _onay_gerekli(name):
-    """Onay zorunlu mu? config: onay = "riskli" (varsayılan) | "hepsi" | "kapali"."""
+    """Onay zorunlu mu? config: onay = "riskli" (varsayılan) | "hepsi" | "kapali".
+
+    SANAL BİLGİSAYAR: ajan zaten kendi kutusunda çalışıyor → onay sorulmaz.
+    Gerçek makinede davranış değişmez.
+    """
+    sd = _sanal()
+    if sd and sd.acik(CFG):
+        return False
     mode = (CFG.get("onay") or "riskli").lower()
     if mode == "kapali":
         return False

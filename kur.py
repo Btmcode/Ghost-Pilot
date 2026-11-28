@@ -2227,6 +2227,58 @@ def hata_temizle():
         return 1
 
 
+def sanal(arg=""):
+    """SANAL BİLGİSAYAR — tek komut, tek karar.
+
+    python kur.py sanal ac    → sanal bilgisayarı aç
+    python kur.py sanal kapat → kapat (gerçek bilgisayar kuralları)
+    python kur.py sanal       → durumu göster
+    """
+    try:
+        import sanaldunya as sd
+    except Exception as e:
+        print("  Sanal modül bulunamadı:", e)
+        return 1
+    a = (arg or "").strip().lower()
+    if a in ("ac", "aç", "on", "1", "basla"):
+        sd.ac()
+        d = sd.durum()
+        print("")
+        print("  SANAL BİLGİSAYAR AÇILDI")
+        print("  " + "-" * 46)
+        print("  Ajanın kendi alanı :", d["kok"])
+        print("  Ajanın ekran alanı : sol üst yarı")
+        print("  Onay sorulmaz      : sanal alanda her işlem serbest")
+        print("  Gerçek dosyalarınız: DOKUNULMAZ")
+        print("")
+        print("  Kapatmak için: python kur.py sanal kapat")
+        print("")
+        return 0
+    if a in ("kapat", "kapali", "off", "0", "durdur"):
+        sd.kapat()
+        print("")
+        print("  SANAL BİLGİSAYAR KAPATILDI")
+        print("  Artık gerçek bilgisayar kuralları geçerli:")
+        print("   · yalnız kendi klasörlerinizde okuma/yazma")
+        print("   · riskli işlemlerde onay istenir")
+        print("")
+        return 0
+    d = sd.durum()
+    print("")
+    print("  SANAL BİLGİSAYAR DURUMU")
+    print("  " + "-" * 46)
+    print("  Durum        :", "AÇIK" if d["acik"] else "kapalı")
+    print("  Ajanın alanı :", d["kok"])
+    print("  Ekran alanı  :", d["ekran_siniri"] or "tüm ekran")
+    print("  Not          :", d["not"])
+    if d.get("izole_ortam"):
+        print("  Bu makine zaten sanal:", d["izole_ortam"])
+    print("")
+    print("  Açmak için   : python kur.py sanal ac")
+    print("")
+    return 0
+
+
 def main():
     cmd = (sys.argv[1] if len(sys.argv) > 1 else "").lower()
     if not os.path.exists(SERVER):
@@ -2378,6 +2430,8 @@ def main():
         return izin(sys.argv[2:])
     if cmd in ("izin-sil",):
         return izin_sil(sys.argv[2:])
+    if cmd in ("sanal", "sanal-bilgisayar", "virtual"):
+        return sanal(sys.argv[2] if len(sys.argv) > 2 else "")
     if cmd in ("otomatik", "autostart"):
         return otomatik()
     if cmd in ("otomatik-kaldir", "noautostart"):

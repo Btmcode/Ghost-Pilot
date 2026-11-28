@@ -9,7 +9,7 @@
 
 ## 📦 Adım 1 — Dosyayı indirin ve açın (2 dk)
 
-1. Size gelen **`GhostPilot-MCP-v5.22.0.zip`** dosyasını **İndirilenler** klasörüne indirin
+1. Size gelen **`GhostPilot-MCP-v5.23.0.zip`** dosyasını **İndirilenler** klasörüne indirin
 2. Dosyaya **sağ tıklayın** → **Tümünü ayıkla** → **Ayıkla**
 3. Açılan **`GhostPilot`** klasörünü **Masaüstüne** sürükleyin
 
@@ -55,7 +55,7 @@ Masaüstündeki **👻 GhostPilot** kısayoluna çift tıklayın.
 **Ne göreceksiniz:** Koyu renkli bir panel açılır. En üstte:
 
 ```
-GhostPilot · v5.22.0    Gerçek bilgisayarınız, sandbox değil · ayda 20.000 çağrı ücretsiz
+GhostPilot · v5.23.0    Gerçek bilgisayarınız, sandbox değil · ayda 20.000 çağrı ücretsiz
 ```
 
 Ve **3 sekme**: Durum · Lisans · Paketler
@@ -253,7 +253,7 @@ python kur.py hata
 
 ```
 [2026-11-25 18:49:22] PANEL OLUŞTURULAMADI
-sürüm   : 5.22.0
+sürüm   : 5.23.0
 sistem  : Windows-11-...
 python  : 3.13.7 (C:\Users\ali\GhostPilot\.venv\Scripts\python.exe)
 klasör  : C:\Users\ali\GhostPilot
@@ -312,3 +312,17 @@ Kısayol her zaman **kurulum yaptığınız klasörü** (örn. `C:\Users\ali\Gho
 <b>GhostPilot</b> — gerçek bilgisayarınız, sandbox değil.<br>
 BTM Code
 </p>
+
+## Sanal bilgisayar — tek satır (isteğe bağlı)
+
+Ajanın gerçek dosyalarınıza dokunmasını istemiyorsanız:
+
+```
+python kur.py sanal ac
+```
+
+- Ajan yalnız `C:\Users\<siz>\.ghostpilot\sanal` klasöründe çalışır.
+- Kendi imlecini kullanır, sizin fareniz kımıldamaz.
+- Kutu içinde onay sorulmaz; gerçek bilgisayarda kurallar aynı kalır.
+- Kapatmak için: `python kur.py sanal kapat`
+
