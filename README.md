@@ -1,5 +1,7 @@
 # 👻 GhostPilot
 
+> **Hızlı başlangıç:** [BAGLA.md](BAGLA.md) — programı aç, tek düğmeye bas, bağlan.
+
 > **Your real computer, not a sandbox.** · **Gerçek bilgisayarınız, sandbox değil.**
 
 GhostPilot connects ChatGPT, Claude, Cursor and any MCP-compatible assistant to **your own machine** — so the assistant can read your files, run your commands and see the result. No cloud, no upload, no sandbox.
@@ -11,7 +13,7 @@ GhostPilot connects ChatGPT, Claude, Cursor and any MCP-compatible assistant to 
 
 ## Badges
 
-![Version](https://img.shields.io/badge/version-5.17.0-22d3ee)
+![Version](https://img.shields.io/badge/version-5.18.0-22d3ee)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![Tools](https://img.shields.io/badge/tools-44-f59e0b)

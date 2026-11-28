@@ -31,6 +31,11 @@ for _s in (sys.stdout, sys.stderr):
 os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+# Windows'ta alt süreçler konsol penceresi açmasın (pythonw.exe yanıp sönmesin)
+SESSIZ = {}
+if sys.platform.startswith("win"):
+    SESSIZ["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
 SERVER = os.path.join(HERE, "ghostpilot.py")
 OS_NAME = platform.system()
 IS_WIN = OS_NAME == "Windows"
@@ -872,6 +877,13 @@ def relay_running(port=None):
         return None
 
 
+def tunel_icin_agi_ac():
+    """Tek düğme tüneli (SSH/Tailscale) 127.0.0.1'e tünel açar; o yüzden
+    sunucunun yalnız yerel arayüze bağlanması yeterli ve daha güvenli.
+    Ağ arayüzüne açmak GEREKMEZ. İleride gerekirse buradan True döndürün."""
+    return False
+
+
 def start_relay_bg():
     """Bekçiyi (watchdog) arka planda başlatır — sunucu HEP ayakta kalır."""
     port = port_cfg()
@@ -886,9 +898,10 @@ def start_relay_bg():
         else:
             exe = PY
             kw["start_new_session"] = True
-        subprocess.Popen([exe, SERVER, "watchdog", "--port", str(port)],
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                         cwd=HERE, **kw)
+        wd_args = [exe, SERVER, "watchdog", "--port", str(port)]
+        # 127.0.0.1 yeterli: tünel de yerelden bağlanır. Ağa açmak gereksiz risk.
+        subprocess.Popen(wd_args, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, cwd=HERE, **kw)
         for _ in range(25):
             time.sleep(0.4)
             if relay_running(port):

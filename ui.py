@@ -4,8 +4,9 @@
 #  GhostPilot — ui.py  ·  PROGRAM ARAYÜZÜ
 #  Copyright (c) 2026 BTM Code — MIT License
 #
-#  Tasarım: 3 sekme (Durum · Lisans · Paketler) + alt durum çubuğu.
-#  Pencere küçültülse bile hiçbir içerik taşmaz (her sekme kaydırılabilir).
+#  TASARIM KURALI: tek ekran, tek büyük düğme.
+#  Kullanıcı programı açınca NE YAPACAĞINI düşünmek zorunda kalmamalı.
+#  Her şey (lisans, klasörler, hata kaydı, dil) "Gelişmiş" penceresinde.
 # ============================================================================
 
 import os
@@ -16,13 +17,17 @@ import threading
 BURASI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BURASI)
 
-# ---- tema
-ARKA, KART, CIZGI = "#0f172a", "#17233b", "#243450"
-UST = "#132038"
-METIN, SOLUK, SILIK = "#e8eef7", "#93a4be", "#5f7392"
-AMBER, YESIL, KIRMIZI = "#f59e0b", "#22c55e", "#ef4444"
-MAVI, VURGU_BG = "#38bdf8", "#14301f"
+# Windows'ta alt süreçler konsol penceresi açmasın (pythonw.exe yanıp sönmesin)
+SESSIZ = {}
+if sys.platform.startswith("win"):
+    SESSIZ["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
 
+# ---- tema
+ARKA = "#0b1120"
+KART = "#141f33"
+CIZGI = "#22314e"
+METIN, SOLUK, SILIK = "#e8eef7", "#93a4be", "#5f7392"
+YESIL, KIRMIZI, AMBER = "#22c55e", "#ef4444", "#f59e0b"
 F = "Segoe UI"
 
 try:
@@ -33,94 +38,169 @@ except Exception:
     TK = False
 
 try:
-    import diller
-    from diller import t
-except Exception:
-    diller = None
-
-try:
     import hata
     hata.kur("ui", sesli=True)
 except Exception:
     hata = None
 
-    def t(k, **kw):
-        return k
+try:
+    import diller as _D
+except Exception:
+    _D = None
 
 
-def _gp():
-    import ghostpilot
-    return ghostpilot
+# ---------------------------------------------------------------------------
+#  METİNLER — dört dil. Seçili dil yoksa Türkçe.
+# ---------------------------------------------------------------------------
+_M = {
+    "tr": {
+        "hazir": "Bilgisayarınız hazır",
+        "hazir_alt": "Aşağıdaki düğmeye basın, ChatGPT bilgisayarınıza bağlanır.",
+        "kapali": "Bağlantı kapalı",
+        "kapali_alt": "Bağlanmak için aşağıdaki düğmeye basın.",
+        "bagla": "🔗  ChatGPT'ye Bağlan",
+        "kapat": "⛔  Bağlantıyı Kapat",
+        "bekle": "Adres hazırlanıyor… (10–40 saniye)",
+        "hazir_adres": "Adresiniz hazır. Kopyalayın, ChatGPT'ye yapıştırın.",
+        "kopyala": "📋  Adresi Kopyala",
+        "kopyalandi": "✅ Kopyalandı",
+        "adim_baslik": "CHATGPT'DE NE YAPACAKSINIZ",
+        "adim1": "1.  ChatGPT'yi açın → Ayarlar → Bağlayıcılar",
+        "adim2": "2.  Gelişmiş → Geliştirici modunu açın",
+        "adim3": "3.  Oluştur → adresi yapıştırın → Kimlik doğrulama: Yok",
+        "adim4": "4.  Oluştur'a basın. Yeni sohbette + menüsünden GhostPilot'u seçin.",
+        "gelismis": "Gelişmiş",
+        "lisans": "Lisans",
+        "cikis": "Çıkış",
+        "kapali_hata": "Sunucu açılamadı. Aşağıdaki ayrıntıya bakın.",
+        "aciliyor": "Sunucu açılıyor…",
+        "alt_not": "Bağlantı program kapanınca kesilir.",
+    },
+    "en": {
+        "hazir": "Your computer is ready",
+        "hazir_alt": "Press the button below and ChatGPT can use your computer.",
+        "kapali": "Connection is off",
+        "kapali_alt": "Press the button below to connect.",
+        "bagla": "🔗  Connect ChatGPT",
+        "kapat": "⛔  Disconnect",
+        "bekle": "Preparing the address… (10–40 seconds)",
+        "hazir_adres": "Your address is ready. Copy it and paste it into ChatGPT.",
+        "kopyala": "📋  Copy address",
+        "kopyalandi": "✅ Copied",
+        "adim_baslik": "WHAT TO DO IN CHATGPT",
+        "adim1": "1.  Open ChatGPT → Settings → Connectors",
+        "adim2": "2.  Advanced → turn on Developer mode",
+        "adim3": "3.  Create → paste the address → Authentication: None",
+        "adim4": "4.  Press Create. In a new chat pick GhostPilot from the + menu.",
+        "gelismis": "Advanced",
+        "lisans": "Licence",
+        "cikis": "Quit",
+        "kapali_hata": "The server could not start. See the details below.",
+        "aciliyor": "Starting the server…",
+        "alt_not": "The connection ends when you close this program.",
+    },
+    "de": {
+        "hazir": "Ihr Computer ist bereit",
+        "hazir_alt": "Drücken Sie die Taste unten, dann kann ChatGPT Ihren Computer nutzen.",
+        "kapali": "Verbindung getrennt",
+        "kapali_alt": "Drücken Sie die Taste unten, um zu verbinden.",
+        "bagla": "🔗  ChatGPT verbinden",
+        "kapat": "⛔  Verbindung trennen",
+        "bekle": "Adresse wird vorbereitet… (10–40 Sekunden)",
+        "hazir_adres": "Ihre Adresse ist bereit. Kopieren und in ChatGPT einfügen.",
+        "kopyala": "📋  Adresse kopieren",
+        "kopyalandi": "✅ Kopiert",
+        "adim_baslik": "WAS SIE IN CHATGPT TUN",
+        "adim1": "1.  ChatGPT öffnen → Einstellungen → Connectors",
+        "adim2": "2.  Erweitert → Entwicklermodus einschalten",
+        "adim3": "3.  Erstellen → Adresse einfügen → Authentifizierung: Keine",
+        "adim4": "4.  Erstellen drücken. Im neuen Chat GhostPilot im + Menü wählen.",
+        "gelismis": "Erweitert",
+        "lisans": "Lizenz",
+        "cikis": "Beenden",
+        "kapali_hata": "Der Server konnte nicht starten. Details siehe unten.",
+        "aciliyor": "Server startet…",
+        "alt_not": "Die Verbindung endet, wenn Sie das Programm schließen.",
+    },
+    "es": {
+        "hazir": "Su equipo está listo",
+        "hazir_alt": "Pulse el botón de abajo y ChatGPT podrá usar su equipo.",
+        "kapali": "Conexión cerrada",
+        "kapali_alt": "Pulse el botón de abajo para conectar.",
+        "bagla": "🔗  Conectar ChatGPT",
+        "kapat": "⛔  Desconectar",
+        "bekle": "Preparando la dirección… (10–40 segundos)",
+        "hazir_adres": "Su dirección está lista. Cópiela y péguela en ChatGPT.",
+        "kopyala": "📋  Copiar dirección",
+        "kopyalandi": "✅ Copiado",
+        "adim_baslik": "QUÉ HACER EN CHATGPT",
+        "adim1": "1.  Abra ChatGPT → Ajustes → Conectores",
+        "adim2": "2.  Avanzado → active el modo desarrollador",
+        "adim3": "3.  Crear → pegue la dirección → Autenticación: Ninguna",
+        "adim4": "4.  Pulse Crear. En un chat nuevo elija GhostPilot en el menú +.",
+        "gelismis": "Avanzado",
+        "lisans": "Licencia",
+        "cikis": "Salir",
+        "kapali_hata": "El servidor no pudo iniciarse. Vea los detalles abajo.",
+        "aciliyor": "Iniciando el servidor…",
+        "alt_not": "La conexión termina al cerrar el programa.",
+    },
+}
 
 
-# ===========================================================================
-#  KÜÇÜK YARDIMCILAR
-# ===========================================================================
-def kart(ata, padx=0, pady=0, **kw):
-    f = tk.Frame(ata, bg=KART, highlightbackground=CIZGI, highlightthickness=1, **kw)
-    return f
+def _dilkod():
+    try:
+        return _D.dil() if _D else "tr"
+    except Exception:
+        return "tr"
 
 
-def baslik(ata, yazi, alt=None):
-    f = tk.Frame(ata, bg=KART)
-    tk.Label(f, text=yazi, bg=KART, fg=METIN, font=(F, 11, "bold"),
-             anchor="w").pack(fill="x")
-    if alt:
-        tk.Label(f, text=alt, bg=KART, fg=SOLUK, font=(F, 9), anchor="w",
-                 justify="left", wraplength=560).pack(fill="x", pady=(2, 0))
-    return f
+def m(anahtar):
+    """Seçili dilde metin. Yoksa Türkçe."""
+    kod = _dilkod()
+    return _M.get(kod, _M["tr"]).get(anahtar) or _M["tr"].get(anahtar, anahtar)
 
 
-def dugme(ata, yazi, komut, tur="normal", genislik=None):
-    renkler = {
-        "birincil": (AMBER, "#1a1206", "#fbbf24"),
-        "normal":   (CIZGI, METIN, KART),
-        "tehlike":  ("#3a1518", "#fca5a5", "#4a1c20"),
-        "basari":   ("#123222", "#86efac", "#17452e"),
-    }
-    bg, fg, act = renkler.get(tur, renkler["normal"])
-    b = tk.Button(ata, text=yazi, command=komut, bg=bg, fg=fg,
-                  activebackground=act, activeforeground=fg,
-                  font=(F, 9, "bold"), relief="flat", bd=0, cursor="hand2",
-                  padx=14, pady=7, highlightthickness=0)
-    if genislik:
-        b.config(width=genislik)
-    return b
+# ---------------------------------------------------------------------------
+#  YARDIMCILAR
+# ---------------------------------------------------------------------------
+def _port():
+    try:
+        import kur as K
+        return K.port_cfg()
+    except Exception:
+        return 17381
 
 
-class Kaydirilabilir(tk.Frame):
-    """İçeriği taşmayan, gerekirse kaydırılabilen alan."""
+def _calisiyor():
+    try:
+        import kur as K
+        return K.relay_running(_port())
+    except Exception:
+        return None
 
-    def __init__(self, ata, **kw):
-        super().__init__(ata, bg=ARKA, **kw)
-        # width=1: içerik genişliği pencereyi ZORLAMASIN (taşma/kırpılma olmasın)
-        self.tuval = tk.Canvas(self, bg=ARKA, highlightthickness=0, bd=0,
-                               width=1, height=1)
-        self.cubuk = ttk.Scrollbar(self, orient="vertical", command=self.tuval.yview)
-        self.tuval.configure(yscrollcommand=self.cubuk.set)
-        self.cubuk.pack(side="right", fill="y")
-        self.tuval.pack(side="left", fill="both", expand=True)
-        self.ic = tk.Frame(self.tuval, bg=ARKA)
-        self._pencere = self.tuval.create_window((0, 0), window=self.ic, anchor="nw")
-        self.ic.bind("<Configure>", self._guncelle)
-        self.tuval.bind("<Configure>", self._genislik)
-        self.tuval.bind("<Enter>", lambda e: self._teker(True))
-        self.tuval.bind("<Leave>", lambda e: self._teker(False))
 
-    def _guncelle(self, _=None):
-        self.tuval.configure(scrollregion=self.tuval.bbox("all"))
+def _istek(yol, sure=180):
+    """Yerel panel API'sine istek at (arka planda çalışır)."""
+    import json as _j
+    import urllib.request as _u
+    r = _u.Request("http://127.0.0.1:%d%s" % (_port(), yol), method="POST")
+    with _u.urlopen(r, timeout=sure) as f:
+        return _j.loads(f.read().decode("utf-8", "replace"))
 
-    def _genislik(self, olay):
-        self.tuval.itemconfigure(self._pencere, width=olay.width)
 
-    def _teker(self, bagla):
-        if bagla:
-            self.tuval.bind_all("<MouseWheel>", self._kaydir)
-        else:
-            self.tuval.unbind_all("<MouseWheel>")
-
-    def _kaydir(self, olay):
-        self.tuval.yview_scroll(int(-1 * (olay.delta / 120)), "units")
+def _sunucu_baslat():
+    try:
+        import kur as K
+        K.basla(sessiz=True)
+    except Exception:
+        pass
+    import time
+    for _ in range(40):
+        if _calisiyor():
+            return True
+        time.sleep(0.5)
+    return False
 
 
 # ===========================================================================
@@ -131,736 +211,529 @@ class Panel:
         self.kok = kok
         self.tepsi = None
         self._cikiyor = False
-        self.otomatik = True
-        self._sayfa = {}
-        self._aktif = None
-        self._tunel_var = False
+        self._tunel = ""
+        self._mesgul = False
 
         kok.title("GhostPilot")
         kok.configure(bg=ARKA)
-        kok.geometry("920x720")
-        kok.minsize(860, 620)
+        kok.geometry("700x360")
+        kok.minsize(660, 340)
         try:
             import ikon
             ikon.uygula(kok, "GhostPilot")
         except Exception:
             pass
 
-        self._ust()
-        self._sekmeler()
-        self._durum_cubugu()
-
-        kok.protocol("WM_DELETE_WINDOW", self.tepsiye_gizle)
-        kok.bind("<Unmap>", self._kucult_denetle)
+        self._kur_arayuz()
+        kok.protocol("WM_DELETE_WINDOW", self.cikis_tam)
 
         self._tepsi_kur()
-        if self.otomatik:
-            kok.after(600, self._otomatik_ac)
-        self.yenile()
-        self._dongu()
-        if tepsiye_gizle:
-            kok.after(400, self.tepsiye_gizle)
+        kok.after(400, self._ilk_kontrol)
+        kok.after(2500, self._dongu)
 
-    # ------------------------------------------------------------------ üst
-    def _ust(self):
-        u = tk.Frame(self.kok, bg=UST, height=64)
-        u.pack(fill="x")
-        u.pack_propagate(False)
+    # ---------------------------------------------------------------- arayüz
+    def _kur_arayuz(self):
+        kok = self.kok
 
-        sol = tk.Frame(u, bg=UST)
-        sol.pack(side="left", padx=18)
-        tk.Label(sol, text="GhostPilot", bg=UST, fg=METIN,
-                 font=(F, 15, "bold")).pack(side="left", pady=16)
-        tk.Label(sol, text="·", bg=UST, fg=SILIK,
-                 font=(F, 12)).pack(side="left", padx=6)
-        self.rozet = tk.Label(sol, text="…", bg=UST, fg=SILIK, font=(F, 9))
-        self.rozet.pack(side="left", pady=(19, 16))
+        ust = tk.Frame(kok, bg=ARKA)
+        ust.pack(fill="x", padx=26, pady=(22, 0))
+        tk.Label(ust, text="GhostPilot", bg=ARKA, fg=METIN,
+                 font=(F, 16, "bold")).pack(side="left")
+        self.surum = tk.Label(ust, text="", bg=ARKA, fg=SILIK, font=(F, 9))
+        self.surum.pack(side="left", padx=(10, 0))
 
-        # konumlandırma şeridi — rakip Desktop Commander'a karşı fark (üst şeritte)
-        try:
-            import diller as _dl
-            self.motto = tk.Label(u, text=_dl.t("slogan"), bg=UST, fg=SILIK,
-                                  font=(F, 8))
-            self.motto.pack(side="left", padx=(4, 0), pady=(21, 16))
-        except Exception:
-            self.motto = None
+        # ---- durum satırı
+        dur = tk.Frame(kok, bg=ARKA)
+        dur.pack(fill="x", padx=26, pady=(26, 0))
+        self.nokta = tk.Label(dur, text="●", bg=ARKA, fg=SILIK, font=(F, 15))
+        self.nokta.pack(side="left")
+        yan = tk.Frame(dur, bg=ARKA)
+        yan.pack(side="left", padx=(9, 0), fill="x", expand=True)
+        self.baslik = tk.Label(yan, text=m("kapali"), bg=ARKA, fg=METIN,
+                               font=(F, 14, "bold"), anchor="w")
+        self.baslik.pack(fill="x")
+        self.alt = tk.Label(yan, text=m("kapali_alt"), bg=ARKA, fg=SOLUK,
+                            font=(F, 10), anchor="w", justify="left", wraplength=600)
+        self.alt.pack(fill="x", pady=(3, 0))
 
-        sag = tk.Frame(u, bg=UST)
-        sag.pack(side="right", padx=18)
-        # dil
-        if diller:
-            dk = tk.Frame(sag, bg=UST)
-            dk.pack(side="right", padx=(16, 0), pady=20)
-            self.dil_var = tk.StringVar(value=diller.dil())
-            for kod in diller.DILLER:
-                tk.Radiobutton(dk, text=kod.upper(), value=kod, variable=self.dil_var,
-                               command=self.dil_degistir, bg=UST, fg=SILIK,
-                               selectcolor=UST, activebackground=UST,
-                               activeforeground=AMBER, font=(F, 8, "bold"),
-                               highlightthickness=0, bd=0,
-                               indicatoron=False, width=3,
-                               relief="flat").pack(side="left")
-        self.rozet_durum = tk.Label(sag, text="…", bg="#1e293b", fg=METIN,
-                                    font=(F, 9, "bold"), padx=12, pady=5)
-        self.rozet_durum.pack(side="right", pady=18)
+        # ---- BÜYÜK DÜĞME
+        self.dugme = tk.Button(
+            kok, text=m("bagla"), command=self.tikla,
+            bg=YESIL, fg="#04170c", activebackground="#16a34a",
+            activeforeground="#04170c", font=(F, 14, "bold"), relief="flat",
+            bd=0, cursor="hand2", pady=18, highlightthickness=0)
+        self.dugme.pack(fill="x", padx=26, pady=(26, 0))
 
-    # ------------------------------------------------------------------ sekmeler
-    def _sekmeler(self):
-        bar = tk.Frame(self.kok, bg=ARKA)
-        bar.pack(fill="x", padx=20, pady=(14, 8))
-        self._sekme_dug = {}
-        for anahtar, etiket in (("durum", t("durum")), ("lisans", t("lisans")),
-                                ("paketler", t("paketler_sec"))):
-            b = tk.Button(bar, text=etiket, command=lambda a=anahtar: self.sec(a),
-                          bg=ARKA, fg=SOLUK, activebackground=ARKA, activeforeground=METIN,
-                          font=(F, 10, "bold"), relief="flat", bd=0, cursor="hand2",
-                          padx=18, pady=8, highlightthickness=0)
-            b.pack(side="left", padx=(0, 4))
-            self._sekme_dug[anahtar] = b
+        self.not_ = tk.Label(kok, text=m("alt_not"), bg=ARKA, fg=SILIK,
+                             font=(F, 9), anchor="center")
+        self.not_.pack(fill="x", padx=26, pady=(8, 0))
 
-        self.govde = tk.Frame(self.kok, bg=ARKA)
-        self.govde.pack(fill="both", expand=True, padx=20, pady=(0, 6))
-
-        for anahtar in ("durum", "lisans", "paketler"):
-            k = Kaydirilabilir(self.govde)
-            self._sayfa[anahtar] = k
-        self.durum_sayfasi()
-        self.lisans_sayfasi()
-        self.paketler_sayfasi()
-        self.sec("durum")
-
-    def sec(self, anahtar):
-        for a, k in self._sayfa.items():
-            k.pack_forget()
-        self._sayfa[anahtar].pack(fill="both", expand=True)
-        self._aktif = anahtar
-        for a, b in self._sekme_dug.items():
-            b.config(fg=(METIN if a == anahtar else SOLUK),
-                     bg=(KART if a == anahtar else ARKA))
-
-    # ------------------------------------------------------------------ sekme 1
-    def durum_sayfasi(self):
-        s = self._sayfa["durum"].ic
-        s.configure(bg=ARKA)
-        # ---- 4 durum kartı
-        izg = tk.Frame(s, bg=ARKA)
-        izg.pack(fill="x", pady=(0, 10))
-        self.kartlar = {}
-        for i, (anahtar, etiket) in enumerate([
-                ("sunucu", t("sunucu")), ("bekci", t("bekci")),
-                ("arac", t("arac")), ("mod", t("mod"))]):
-            k = kart(izg)
-            k.grid(row=0, column=i, sticky="nsew", padx=(0 if i == 0 else 9, 0))
-            izg.columnconfigure(i, weight=1, uniform="k")
-            tk.Label(k, text=etiket.upper(), bg=KART, fg=SILIK, font=(F, 8, "bold"),
-                     anchor="w").pack(fill="x", padx=15, pady=(13, 2))
-            d = tk.Label(k, text="—", bg=KART, fg=METIN, font=(F, 13, "bold"), anchor="w")
-            d.pack(fill="x", padx=15, pady=(0, 14))
-            self.kartlar[anahtar] = d
-
-        # ---- kullanım
-        k = kart(s)
-        k.pack(fill="x", pady=(0, 10))
-        ic = tk.Frame(k, bg=KART)
-        ic.pack(fill="x", padx=16, pady=13)
-        tk.Label(ic, text=t("kullanim").upper(), bg=KART, fg=SILIK,
-                 font=(F, 8, "bold"), anchor="w").pack(fill="x")
-        self.kota_metin = tk.Label(ic, text="—", bg=KART, fg=METIN,
-                                   font=(F, 16, "bold"), anchor="w")
-        self.kota_metin.pack(fill="x", pady=(3, 9))
-        self.cubuk = tk.Canvas(ic, height=8, bg="#0b1220", highlightthickness=0)
-        self.cubuk.pack(fill="x")
-        self.cubuk_parca = self.cubuk.create_rectangle(0, 0, 0, 8, fill=YESIL, width=0)
-        self.kota_alt = tk.Label(ic, text="", bg=KART, fg=SOLUK, font=(F, 9),
-                                 anchor="w", justify="left", wraplength=780)
-        self.kota_alt.pack(fill="x", pady=(8, 0))
-
-        # ---- erişim kontrolü
-        k = kart(s)
-        k.pack(fill="x", pady=(0, 10))
-        ic = tk.Frame(k, bg=KART)
-        ic.pack(fill="x", padx=16, pady=13)
-        tk.Label(ic, text="UZAKTAN ERİŞİM", bg=KART, fg=SILIK,
-                 font=(F, 8, "bold"), anchor="w").pack(fill="x")
-        alt = tk.Frame(ic, bg=KART)
-        alt.pack(fill="x", pady=(7, 0))
-        self.btn_durdur = dugme(alt, "⛔  Erişimi durdur", lambda: self.komut("durdur"),
-                                "tehlike")
-        self.btn_durdur.pack(side="left")
-        self.btn_basla = dugme(alt, "▶  Başlat", lambda: self.komut("basla"), "basari")
-        self.btn_basla.pack(side="left", padx=8)
-        dugme(alt, t("yenile"), self.yenile).pack(side="left")
-
-        # ---- tek düğme: bağlantı adresi hazırla
-        bag = tk.Frame(ic, bg=KART)
-        bag.pack(fill="x", pady=(12, 0))
-        self.btn_bagla = dugme(bag, "🔗  Bağlantı adresi hazırla", self.bagla, "basari")
-        self.btn_bagla.pack(side="left")
-        dugme(bag, "📋  Kopyala", self.bagla_kopyala).pack(side="left", padx=8)
-        self.bagla_mesaj = tk.Label(ic, text="", bg=KART, fg=SOLUK, font=(F, 9),
-                                    anchor="w", justify="left", wraplength=780)
-        self.bagla_mesaj.pack(fill="x", pady=(9, 0))
-        self.adres = tk.Entry(ic, bg="#0d1626", fg="#a5d6ff", insertbackground=METIN,
-                              readonlybackground="#0d1626", disabledbackground="#0d1626",
-                              relief="flat", font=("Consolas", 9))
-        self.adres.pack(fill="x", pady=(6, 0), ipady=6)
-        self.adres.insert(0, "")
+        # ---- adres alanı (bağlanınca görünür)
+        self.adres_kutu = tk.Frame(kok, bg=KART, highlightbackground=CIZGI,
+                                   highlightthickness=1)
+        ic = tk.Frame(self.adres_kutu, bg=KART)
+        ic.pack(fill="x", padx=16, pady=14)
+        tk.Label(ic, text=m("hazir_adres"), bg=KART, fg=SOLUK,
+                 font=(F, 10), anchor="w").pack(fill="x")
+        ad = tk.Frame(ic, bg=KART)
+        ad.pack(fill="x", pady=(8, 0))
+        self.adres = tk.Entry(ad, bg="#0a1322", fg="#a5d6ff",
+                              readonlybackground="#0a1322", relief="flat",
+                              font=("Consolas", 9))
+        self.adres.pack(side="left", fill="x", expand=True, ipady=7)
         self.adres.config(state="readonly")
+        self.kopyala_btn = tk.Button(ad, text=m("kopyala"), command=self.kopyala,
+                                     bg=CIZGI, fg=METIN, relief="flat", bd=0,
+                                     activebackground="#2c3f61", activeforeground=METIN,
+                                     font=(F, 9, "bold"), cursor="hand2",
+                                     padx=14, pady=7)
+        self.kopyala_btn.pack(side="left", padx=(8, 0))
+        self.kopya_mesaj = tk.Label(ic, text="", bg=KART, fg=YESIL, font=(F, 9),
+                                    anchor="w")
+        self.kopya_mesaj.pack(fill="x", pady=(6, 0))
 
-        self.erisim_mesaj = tk.Label(ic, text="", bg=KART, fg=SOLUK, font=(F, 9),
-                                     anchor="w", justify="left", wraplength=780)
-        self.erisim_mesaj.pack(fill="x", pady=(9, 0))
-
-        # ---- mod
-        k = kart(s)
-        k.pack(fill="x", pady=(0, 10))
-        ic = tk.Frame(k, bg=KART)
-        ic.pack(fill="x", padx=16, pady=13)
-        tk.Label(ic, text=t("mod").upper(), bg=KART, fg=SILIK,
+        # ---- adımlar
+        self.adimlar = tk.Frame(self.adres_kutu, bg="#0f2a1c")
+        ai = tk.Frame(self.adimlar, bg="#0f2a1c")
+        ai.pack(fill="x", padx=16, pady=12)
+        tk.Label(ai, text=m("adim_baslik"), bg="#0f2a1c", fg="#86efac",
                  font=(F, 8, "bold"), anchor="w").pack(fill="x")
-        alt = tk.Frame(ic, bg=KART)
-        alt.pack(fill="x", pady=(7, 0))
-        dugme(alt, "👁  " + t("salt_okunur"),
-              lambda: self.komut("salt-okunur")).pack(side="left")
-        dugme(alt, "✍  " + t("yazma"), lambda: self.komut("yazma")).pack(side="left", padx=8)
-        dugme(alt, "🔑  " + t("izinleri_iptal"),
-              lambda: self.komut("oauth-sil")).pack(side="left")
+        for k in ("adim1", "adim2", "adim3", "adim4"):
+            tk.Label(ai, text=m(k), bg="#0f2a1c", fg="#c9e8d4", font=(F, 9),
+                     anchor="w", justify="left").pack(fill="x", pady=(4, 0))
 
-        # ---- izin verilen klasörler
-        k = kart(s)
-        k.pack(fill="x", pady=(0, 10))
-        ic = tk.Frame(k, bg=KART)
-        ic.pack(fill="x", padx=16, pady=13)
-        tk.Label(ic, text=t("izin_klasor").upper(), bg=KART, fg=SILIK,
-                 font=(F, 8, "bold"), anchor="w").pack(fill="x")
-        self.klasorler = tk.Label(ic, text="—", bg=KART, fg=SOLUK, font=("Consolas", 9),
-                                  anchor="w", justify="left", wraplength=780)
-        self.klasorler.pack(fill="x", pady=(6, 4))
-        tk.Label(ic, text='Ekle:  python kur.py izin "D:\\Proje"', bg=KART, fg=SILIK,
-                 font=(F, 8), anchor="w").pack(fill="x")
+        # ---- alt çubuk
+        alt = tk.Frame(kok, bg=ARKA)
+        alt.pack(side="bottom", fill="x", padx=26, pady=16)
+        for yazi, fn in ((m("lisans"), self.lisans_penceresi),
+                         (m("gelismis"), self.gelismis_penceresi),
+                         (m("cikis"), self.cikis_tam)):
+            tk.Button(alt, text=yazi, command=fn, bg=ARKA, fg=SOLUK,
+                      activebackground="#1b2942", activeforeground=METIN,
+                      relief="flat", bd=0, highlightthickness=0,
+                      font=(F, 9), cursor="hand2",
+                      padx=10, pady=5).pack(side="left", padx=(0, 6))
 
-    # ------------------------------------------------------------------ sekme 2
-    def lisans_sayfasi(self):
-        s = self._sayfa["lisans"].ic
-        s.configure(bg=ARKA)
-        k = kart(s)
-        k.pack(fill="x", pady=(0, 10))
-        ic = tk.Frame(k, bg=KART)
-        ic.pack(fill="x", padx=16, pady=15)
-        baslik(ic, t("lisans_gir"), t("lisans_alt")).pack(fill="x")
-        satir = tk.Frame(ic, bg=KART)
-        satir.pack(fill="x", pady=(11, 0))
-        self.giris = tk.Entry(satir, font=("Consolas", 10), bg="#0b1220", fg=METIN,
-                              insertbackground=AMBER, relief="flat", bd=0)
-        self.giris.pack(side="left", fill="x", expand=True, ipady=9)
-        self.giris.bind("<Return>", lambda e: self.lisans_uygula())
-        dugme(satir, t("lisans_ekle"), self.lisans_uygula, "birincil").pack(
-            side="left", padx=(8, 0))
-        self.lisans_mesaj = tk.Label(ic, text="", bg=KART, fg=SOLUK, font=(F, 9),
-                                     anchor="w", justify="left", wraplength=780)
-        self.lisans_mesaj.pack(fill="x", pady=(10, 0))
-
-        # mevcut durum
-        k2 = kart(s)
-        k2.pack(fill="x", pady=(0, 10))
-        ic2 = tk.Frame(k2, bg=KART)
-        ic2.pack(fill="x", padx=16, pady=15)
-        tk.Label(ic2, text=t("durum").upper(), bg=KART, fg=SILIK,
-                 font=(F, 8, "bold"), anchor="w").pack(fill="x")
-        self.lisans_bilgi = tk.Label(ic2, text="", bg=KART, fg=METIN, font=(F, 10),
-                                     anchor="w", justify="left", wraplength=780)
-        self.lisans_bilgi.pack(fill="x", pady=(6, 0))
-
-        # cihaz no
-        k3 = kart(s)
-        k3.pack(fill="x")
-        ic3 = tk.Frame(k3, bg=KART)
-        ic3.pack(fill="x", padx=16, pady=15)
-        tk.Label(ic3, text=t("cihaz").upper(), bg=KART, fg=SILIK,
-                 font=(F, 8, "bold"), anchor="w").pack(fill="x")
-        try:
-            import lisans
-            mk = lisans.makine_kimligi()
-        except Exception:
-            mk = "—"
-        tk.Label(ic3, text=mk, bg=KART, fg=MAVI, font=("Consolas", 11, "bold"),
-                 anchor="w").pack(fill="x", pady=(4, 3))
-        tk.Label(ic3, text=t("cihaz_no_ipucu"), bg=KART, fg=SILIK, font=(F, 8),
-                 anchor="w", justify="left", wraplength=760).pack(fill="x")
-
-    # ------------------------------------------------------------------ sekme 3
-    def paketler_sayfasi(self):
-        s = self._sayfa["paketler"].ic
-        s.configure(bg=ARKA)
-        try:
-            import paketler as PK
-        except Exception:
-            return
-
-        bas = tk.Frame(s, bg=ARKA)
-        bas.pack(fill="x", pady=(0, 10))
-        tk.Label(bas, text=PK.m("baslik"), bg=ARKA, fg=METIN,
-                 font=(F, 15, "bold"), anchor="w").pack(fill="x")
-        tk.Label(bas, text=PK.m("alt"), bg=ARKA, fg=SOLUK, font=(F, 9),
-                 anchor="w", justify="left", wraplength=700).pack(fill="x", pady=(3, 0))
-
-        # iki paket kartı yan yana
-        izg = tk.Frame(s, bg=ARKA)
-        izg.pack(fill="x", pady=(4, 10))
-        izg.columnconfigure(0, weight=1, uniform="p")
-        izg.columnconfigure(1, weight=1, uniform="p")
-
-        # ÜCRETSİZ
-        u = kart(izg)
-        u.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
-        iu = tk.Frame(u, bg=KART)
-        iu.pack(fill="both", expand=True, padx=16, pady=10)
-        tk.Label(iu, text=PK.m("ucretsiz"), bg=KART, fg=METIN,
-                 font=(F, 12, "bold"), anchor="w").pack(fill="x")
-        tk.Label(iu, text=f"0 {PK.PARA_BIRIMI}", bg=KART, fg=AMBER,
-                 font=(F, 19, "bold"), anchor="w").pack(fill="x", pady=(2, 2))
-        tk.Label(iu, text=PK.m("devam"), bg=KART, fg=SILIK, font=(F, 8),
-                 anchor="w").pack(fill="x", pady=(0, 6))
-        for anahtar, var in PK.OZELLIKLER:
-            r = tk.Frame(iu, bg=KART)
-            r.pack(fill="x", pady=1)
-            tk.Label(r, text=("✓" if var else "·"), bg=KART,
-                     fg=(YESIL if var else "#334155"), font=(F, 10, "bold"),
-                     width=2, anchor="w").pack(side="left")
-
-            tk.Label(r, text=PK.m(anahtar), bg=KART,
-                     fg=(METIN if var else SILIK), font=(F, 9),
-                     anchor="w").pack(side="left")
-
-        # PRO
-        p = tk.Frame(izg, bg=VURGU_BG, highlightbackground=YESIL, highlightthickness=1)
-        p.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
-        ip = tk.Frame(p, bg=VURGU_BG)
-        ip.pack(fill="both", expand=True, padx=16, pady=10)
-        tk.Label(ip, text=PK.m("en_cok"), bg=VURGU_BG, fg=YESIL,
-                 font=(F, 7, "bold"), anchor="w").pack(fill="x")
-        tk.Label(ip, text="PRO", bg=VURGU_BG, fg=YESIL,
-                 font=(F, 12, "bold"), anchor="w").pack(fill="x")
-        tk.Label(ip, text=f"{PK.PARA_BIRIMI}{PK.AYLIK_FIYAT}{PK.m('ay')}",
-                 bg=VURGU_BG, fg=AMBER, font=(F, 22, "bold"),
-                 anchor="w").pack(fill="x", pady=(2, 2))
-        tk.Label(ip, text=PK.m("sinirsiz"), bg=VURGU_BG, fg="#86efac", font=(F, 8),
-                 anchor="w").pack(fill="x", pady=(0, 6))
-        for anahtar, _ in PK.OZELLIKLER:
-            r = tk.Frame(ip, bg=VURGU_BG)
-            r.pack(fill="x", pady=1)
-            tk.Label(r, text="✓", bg=VURGU_BG, fg=YESIL, font=(F, 10, "bold"),
-                     width=2, anchor="w").pack(side="left")
-            tk.Label(r, text=PK.m(anahtar), bg=VURGU_BG, fg=METIN,
-                     font=(F, 9), anchor="w").pack(side="left")
-
-        # alt bilgi + buton
-        alt = tk.Frame(s, bg=ARKA)
-        alt.pack(fill="x")
-        tk.Label(alt, text=PK.m("fiyat_not"), bg=ARKA, fg=SILIK, font=(F, 8),
-                 anchor="w", justify="left", wraplength=560).pack(side="left")
-
-        # ---- rakip karşılaştırması (Desktop Commander ile fark) ----
-        try:
-            kk = tk.Frame(s, bg=ARKA)
-            kk.pack(fill="x", pady=(6, 0))
-            tk.Label(kk, text=PK.rakip_metni(), bg=ARKA, fg="#7dd3fc",
-                     font=(F, 8), anchor="w", justify="left",
-                     wraplength=820).pack(side="left")
-        except Exception:
-            pass
-        dugme(alt, "💛  " + PK.m("katil"), self._bagis_ac, "birincil").pack(side="right")
-
-    # ------------------------------------------------------------------ alt çubuk
-    def _durum_cubugu(self):
-        c = tk.Frame(self.kok, bg=UST, height=44)
-        c.pack(fill="x", side="bottom")
-        c.pack_propagate(False)
-        self.alt_mesaj = tk.Label(c, text="", bg=UST, fg=SOLUK, font=(F, 9), anchor="w")
-        self.alt_mesaj.pack(side="left", padx=20)
-        dugme(c, t("kapat"), self.tepsiye_gizle).pack(side="right", padx=16, pady=9)
-        dugme(c, "⏻  " + t("cikis_tam"), self.cikis_tam, "tehlike").pack(
-            side="right", padx=(0, 6), pady=9)
-
-    # ------------------------------------------------------------------ eylemler
-    def _mesaj(self, yazi, tur="normal"):
-        renk = {"ok": YESIL, "err": KIRMIZI, "normal": SOLUK}.get(tur, SOLUK)
-        try:
-            self.erisim_mesaj.config(text=yazi, fg=renk)
-            self.alt_mesaj.config(text=yazi, fg=renk)
-        except Exception:
-            pass
-
-    def komut(self, ad, dugm=None):
-        def _():
-            if dugm:
-                dugm.config(state="disabled")
-            self._mesaj("⏳ işleniyor…")
-            try:
-                r = subprocess.run([sys.executable, os.path.join(BURASI, "kur.py"), ad],
-                                   capture_output=True, text=True, encoding="utf-8",
-                                   errors="replace", timeout=180)
-                cikti = (r.stdout or "").strip()
-                self._mesaj(cikti.splitlines()[-1][:160] if cikti else "tamam",
-                            "ok" if r.returncode == 0 else "err")
-            except Exception as e:
-                self._mesaj(str(e), "err")
-            finally:
-                if dugm:
-                    dugm.config(state="normal")
-            self.yenile()
-        threading.Thread(target=_, daemon=True).start()
-
-    # ------------------------------------------------------------------ bağla
-    def bagla(self):
-        """Tek düğme: panelde bağlantı adresi üretir (tünel açar)."""
-        if getattr(self, "_tunel_var", False):
-            self._tunel_kapat()
-            return
-        self.btn_bagla.config(state="disabled")
-        self.bagla_mesaj.config(text="⏳ Adres hazırlanıyor… (10–40 saniye)", fg=SOLUK)
-
-        def _():
-            try:
-                import json as _j
-                import urllib.request as _u
-                port = 17381
-                try:
-                    p = os.path.join(os.path.expanduser("~"), ".ghostpilot", "config.json")
-                    port = int(_j.load(open(p, encoding="utf-8")).get("port") or port)
-                except Exception:
-                    pass
-                r = _u.Request(f"http://127.0.0.1:{port}/panel/eylem?k=bagla", method="POST")
-                with _u.urlopen(r, timeout=150) as f:
-                    d = _j.loads(f.read().decode("utf-8", "replace"))
-                msg = str(d.get("message") or "")
-                if msg.startswith("BAGLANDI|"):
-                    adres = msg.split("|")[2]
-                    self._tunel_var = True
-                    self.kok.after(0, lambda: self._adres_goster(adres, True))
-                elif msg.startswith("TUNEL_KAPATILDI"):
-                    self._tunel_var = False
-                    self.kok.after(0, lambda: self._adres_goster("", False))
-                else:
-                    hata = msg.split("|", 1)[-1]
-                    self.kok.after(0, lambda: self.bagla_mesaj.config(
-                        text="⚠️ " + hata, fg=KIRMIZI))
-            except Exception as e:
-                self.kok.after(0, lambda: self.bagla_mesaj.config(
-                    text=f"⚠️ Sunucu yanıt vermedi ({e}). Önce 'Başlat'a basın.", fg=KIRMIZI))
-            finally:
-                self.kok.after(0, lambda: self.btn_bagla.config(
-                    state="normal",
-                    text=("⛔  Bağlantıyı kapat" if getattr(self, "_tunel_var", False)
-                          else "🔗  Bağlantı adresi hazırla")))
-        threading.Thread(target=_, daemon=True).start()
-
-    def _adres_goster(self, adres, acik):
-        self.adres.config(state="normal")
-        self.adres.delete(0, "end")
-        self.adres.insert(0, adres)
-        self.adres.config(state="readonly")
+    # ----------------------------------------------------------------- durum
+    def _boya(self, acik, yazi=None, alt=None):
         if acik:
-            self.bagla_mesaj.config(
-                text="✅ Adres hazır. Kopyalayın, ChatGPT'de Bağlayıcılar → Oluştur "
-                     "ekranına yapıştırın. Kimlik doğrulama: Yok.", fg=YESIL)
-        else:
-            self.bagla_mesaj.config(text="Bağlantı kapatıldı.", fg=SOLUK)
-
-    def _tunel_kapat(self):
-        self.btn_bagla.config(state="disabled")
-        self.bagla_mesaj.config(text="⏳ Kapatılıyor…", fg=SOLUK)
-
-        def _():
+            self.nokta.config(fg=YESIL)
+            self.baslik.config(text=yazi or m("hazir"))
+            self.alt.config(text=alt or m("hazir_alt"))
+            self.dugme.config(text=m("kapat"), bg="#3a1518", fg="#fca5a5",
+                              activebackground="#4a1c20", activeforeground="#fca5a5")
+            self.adres_kutu.pack(fill="x", padx=26, pady=(16, 0),
+                                 before=self.not_)
+            self.adimlar.pack(fill="x")
             try:
-                import json as _j
-                import urllib.request as _u
-                port = 17381
-                try:
-                    p = os.path.join(os.path.expanduser("~"), ".ghostpilot", "config.json")
-                    port = int(_j.load(open(p, encoding="utf-8")).get("port") or port)
-                except Exception:
-                    pass
-                r = _u.Request(f"http://127.0.0.1:{port}/panel/eylem?k=bagla", method="POST")
-                _u.urlopen(r, timeout=60).read()
+                self.kok.geometry("700x700")
             except Exception:
                 pass
-            self._tunel_var = False
-            self.kok.after(0, lambda: self._adres_goster("", False))
-            self.kok.after(0, lambda: self.btn_bagla.config(
-                state="normal", text="🔗  Bağlantı adresi hazırla"))
-        threading.Thread(target=_, daemon=True).start()
-
-    def bagla_kopyala(self):
-        adres = self.adres.get().strip()
-        if not adres:
-            self.bagla_mesaj.config(text="Önce adresi hazırlayın.", fg=SOLUK)
-            return
-        try:
-            self.kok.clipboard_clear()
-            self.kok.clipboard_append(adres)
-            self.bagla_mesaj.config(text="📋 Kopyalandı. ChatGPT'ye yapıştırabilirsiniz.",
-                                    fg=YESIL)
-        except Exception as e:
-            self.bagla_mesaj.config(text=f"Kopyalanamadı: {e}", fg=KIRMIZI)
-
-    def lisans_uygula(self):
-        k = self.giris.get().strip()
-        if not k:
-            self.lisans_mesaj.config(text=t("lisans_yok"), fg=SOLUK)
-            return
-        try:
-            r = _gp().lisans_ayarla(k)
-        except Exception as e:
-            r = {"ok": False, "error": str(e)}
-        if r.get("ok"):
-            self.lisans_mesaj.config(text="✓ " + t("ls_gecerli") + " — " +
-                                     str(r.get("message", "")), fg=YESIL)
-            self.giris.delete(0, "end")
         else:
-            self.lisans_mesaj.config(text="✕ " + t("ls_gecersiz") + ": " +
-                                     str(r.get("error")), fg=KIRMIZI)
-        self.yenile()
+            self.nokta.config(fg=SILIK)
+            self.baslik.config(text=yazi or m("kapali"))
+            self.alt.config(text=alt or m("kapali_alt"))
+            self.dugme.config(text=m("bagla"), bg=YESIL, fg="#04170c",
+                              activebackground="#16a34a", activeforeground="#04170c")
+            self.adres_kutu.pack_forget()
+            try:
+                self.kok.geometry("700x360")
+            except Exception:
+                pass
 
-    def _bagis_ac(self):
+    def _ilk_kontrol(self):
         try:
-            import paketler as PK
-            import webbrowser
-            webbrowser.open(PK.BAGIS_URL)
+            import ghostpilot as G
+            self.surum.config(text="v" + G.VERSION)
         except Exception:
             pass
+        self.durum_guncelle()
 
-    def web_panel(self):
-        threading.Thread(
-            target=lambda: subprocess.Popen([sys.executable,
-                                             os.path.join(BURASI, "kur.py"), "panel"]),
-            daemon=True).start()
-
-    def dil_degistir(self):
-        if diller:
-            diller.dil_sec(self.dil_var.get())
-        # sekmeleri yeniden kur
-        for w in self.kok.winfo_children():
-            w.destroy()
-        self._sayfa, self._sekme_dug = {}, {}
-        self._ust()
-        self._sekmeler()
-        self._durum_cubugu()
-        self.yenile()
-
-    # ------------------------------------------------------------------ yenile
-    def yenile(self):
+    # -------- tünel durumu: sunucunun kendi kaydından oku (asıl kaynak)
+    @staticmethod
+    def _tunel_bilgi():
         try:
-            G = _gp()
+            import json
+            p = os.path.join(os.path.expanduser("~"), ".ghostpilot", "tunel.json")
+            with open(p, encoding="utf-8") as f:
+                return json.load(f) or {}
         except Exception:
-            self.kartlar["sunucu"].config(text=t("modul_yok"), fg=KIRMIZI)
-            return
-        import kur as K
-        try:
-            port = K.port_cfg()
-            h = K.relay_running(port)
-        except Exception:
-            h = None
+            return {}
 
-        if h:
-            self.kartlar["sunucu"].config(text=t("calisiyor"), fg=YESIL)
-            self.kartlar["arac"].config(text=str(h.get("tools", "—")), fg=METIN)
-            self.rozet.config(text=f"v{h.get('version', G.VERSION)}")
-            self.rozet_durum.config(text="✅  " + t("erisim_acik"),
-                                    bg="#123222", fg="#86efac")
+    def _tunel_canli(self):
+        d = self._tunel_bilgi()
+        url = (d.get("url") or "").strip()
+        pid = d.get("pid")
+        if not url:
+            return ""
+        if not pid:
+            return url  # tailscale: pid yok, adres varsa açık
+        try:
+            if os.name == "nt":
+                r = subprocess.run(["tasklist", "/FI", "PID eq %s" % pid],
+                                   capture_output=True, text=True, timeout=10, **SESSIZ)
+                return url if str(pid) in (r.stdout or "") else ""
+            os.kill(int(pid), 0)
+            return url
+        except Exception:
+            return ""
+
+    def durum_guncelle(self):
+        if not self._mesgul:
+            url = self._tunel_canli()
+            if url and not self._tunel:
+                self._tunel = url
+            elif not url and self._tunel:
+                self._tunel = ""
+        h = _calisiyor()
+        if self._tunel:
+            if self.adres.get().strip() != self._tunel:
+                self.adres.config(state="normal")
+                self.adres.delete(0, "end")
+                self.adres.insert(0, self._tunel)
+                self.adres.config(state="readonly")
+            self._boya(True)
+        elif h:
+            self._boya(False, yazi=m("kapali"),
+                       alt="Bağlanmak için aşağıdaki düğmeye basın.")
         else:
-            self.kartlar["sunucu"].config(text=t("durdu"), fg=KIRMIZI)
-            self.kartlar["arac"].config(text="—", fg=SILIK)
-            self.rozet.config(text=f"v{G.VERSION}")
-            self.rozet_durum.config(text="⛔  " + t("erisim_kapali"),
-                                    bg="#3a1518", fg="#fca5a5")
-        # bekçi
-        try:
-            pid_f = os.path.join(G.CFG_DIR, "watchdog.pid")
-            pid = int(open(pid_f).read().strip() or 0) if os.path.exists(pid_f) else 0
-            canli = False
-            if pid:
-                if os.name == "nt":
-                    r = subprocess.run(["tasklist", "/FI", f"PID eq {pid}"],
-                                       capture_output=True, text=True, timeout=10)
-                    canli = str(pid) in (r.stdout or "")
-                else:
-                    os.kill(pid, 0)
-                    canli = True
-            self.kartlar["bekci"].config(text=t("aktif") if canli else t("yok"),
-                                         fg=YESIL if canli else SILIK)
-        except Exception:
-            self.kartlar["bekci"].config(text=t("yok"), fg=SILIK)
-        # mod
-        try:
-            self.kartlar["mod"].config(
-                text=(t("salt_okunur") if G.CFG.get("read_only") else t("yazma")),
-                fg=METIN)
-        except Exception:
-            pass
-        # kullanım
-        try:
-            kd = G.kota_durum()
-            lb = kd.get("lisans_bilgi") or {}
-            if kd["pro"]:
-                paket = lb.get("plan_adi", "")
-                kalan = lb.get("kalan_gun")
-                self.kota_metin.config(
-                    text="PRO · " + t("sinirsiz") + (f"  ·  {paket}" if paket else ""),
-                    fg="#86efac")
-                self.cubuk.itemconfig(self.cubuk_parca, fill=YESIL)
-                self.cubuk.coords(self.cubuk_parca, 0, 0,
-                                  max(4, self.cubuk.winfo_width()), 8)
-                self.kota_alt.config(
-                    text=(f"{t('kalan_gun', n=kalan)}" if kalan is not None else ""),
-                    fg=TURUNCU if lb.get("yenile") else SOLUK)
-                self.lisans_bilgi.config(
-                    text=(f"{lb.get('plan_adi','—')}  ·  {lb.get('id','—')}  ·  "
-                          f"{lb.get('bagli_metin','—')}"), fg=METIN)
-            else:
-                kull, lim = kd["kullanilan"], kd["limit"]
-                self.kota_metin.config(
-                    text=f"{kull:,} / {lim:,}".replace(",", "."), fg=METIN)
-                yuz = min(100, kd["yuzde"])
-                w = max(1, int(self.cubuk.winfo_width() * yuz / 100))
-                self.cubuk.coords(self.cubuk_parca, 0, 0, w, 8)
-                self.cubuk.itemconfig(
-                    self.cubuk_parca,
-                    fill=(KIRMIZI if yuz >= 100 else AMBER if yuz >= 80 else YESIL))
-                if kd.get("pro_iptal"):
-                    self.kota_alt.config(text="⛔ " + str(kd.get("pro_iptal_neden")),
-                                         fg=KIRMIZI)
-                elif kd["asis"]:
-                    self.kota_alt.config(text=t("sinir_doldu"), fg=KIRMIZI)
-                else:
-                    self.kota_alt.config(
-                        text=(f"{t('kalan')}: {kd['kalan']:,}".replace(",", ".")
-                              + "   ·   " + t("sifirlanma_alt")),
-                        fg=SOLUK)
-                    # %80 uyarısı — sürpriz olmasın (rakip standardı)
-                    if kd.get("uyari_seviyesi") == "uyari":
-                        self.kota_alt.config(text=kd.get("uyari_mesaji") + "  "
-                                             + t("sifirlanma_alt"), fg=AMBER)
-                    elif kd.get("uyari_seviyesi") == "sinir":
-                        self.kota_alt.config(text=kd.get("uyari_mesaji") + "  "
-                                             + t("sifirlanma_alt"), fg=KIRMIZI)
-                self.lisans_bilgi.config(text=t("lisans_yok"), fg=SOLUK)
-        except Exception:
-            pass
-        # klasörler
-        try:
-            kokler = (G.CFG.get("read_roots") or []) + (G.CFG.get("write_roots") or [])
-            self.klasorler.config(
-                text=("\n".join(sorted(set(kokler))[:6]) if kokler else "—"))
-        except Exception:
-            pass
-        self.tepsi_durum_guncelle()
+            self._boya(False)
 
     def _dongu(self):
         try:
-            self.yenile()
+            self.durum_guncelle()
         except Exception:
             pass
         self.kok.after(3000, self._dongu)
 
-    # ------------------------------------------------------------------ tepsi
+    # ---------------------------------------------------------------- eylem
+    def tikla(self):
+        if self._mesgul:
+            return
+        if self._tunel:
+            self._kapat()
+        else:
+            self._baglan()
+
+    def _mesgul_yap(self, acik, yazi=None):
+        self._mesgul = acik
+        self.dugme.config(state="disabled" if acik else "normal",
+                          text=yazi or (m("kapat") if self._tunel else m("bagla")))
+
+    def _baglan(self):
+        self._mesgul_yap(True, m("bekle"))
+        self.alt.config(text=m("aciliyor"))
+        self.nokta.config(fg=AMBER)
+
+        def _():
+            sonuc = {"tip": "hata", "metin": m("kapali_hata")}
+            if not _calisiyor() and not _sunucu_baslat():
+                sonuc["metin"] = m("kapali_hata")
+            else:
+                try:
+                    d = _istek("/panel/eylem?k=bagla", sure=180)
+                    msg = str(d.get("message") or "")
+                    if msg.startswith("BAGLANDI|"):
+                        self._tunel = msg.split("|")[2]
+                        sonuc = {"tip": "ok"}
+                    elif msg.startswith("TUNEL_YOK|"):
+                        sonuc = {"tip": "hata", "metin": msg.split("|", 1)[1]}
+                    else:
+                        sonuc = {"tip": "hata", "metin": msg or m("kapali_hata")}
+                except Exception as e:
+                    sonuc = {"tip": "hata", "metin": "%s\n%s" % (m("kapali_hata"), e)}
+            self.kok.after(0, lambda: self._baglan_bitti(sonuc))
+        threading.Thread(target=_, daemon=True).start()
+
+    def _baglan_bitti(self, sonuc):
+        self._mesgul_yap(False)
+        if sonuc.get("tip") == "ok":
+            self.adres.config(state="normal")
+            self.adres.delete(0, "end")
+            self.adres.insert(0, self._tunel)
+            self.adres.config(state="readonly")
+            self.kopya_mesaj.config(text="")
+            self._boya(True)
+        else:
+            self._boya(False, yazi="Bağlanamadı", alt=sonuc.get("metin", "")[:400])
+            self.nokta.config(fg=KIRMIZI)
+
+    def _kapat(self):
+        self._tunel = ""
+        self._boya(False)
+        self.kopya_mesaj.config(text="")
+
+        def _():
+            try:
+                _istek("/panel/eylem?k=bagla", sure=60)
+            except Exception:
+                pass
+        threading.Thread(target=_, daemon=True).start()
+
+    def kopyala(self):
+        a = self.adres.get().strip()
+        if not a:
+            return
+        try:
+            self.kok.clipboard_clear()
+            self.kok.clipboard_append(a)
+            self.kopya_mesaj.config(text=m("kopyalandi"))
+        except Exception as e:
+            self.kopya_mesaj.config(text=str(e)[:80], fg=KIRMIZI)
+
+    # --------------------------------------------------------------- lisans
+    def lisans_penceresi(self):
+        p = tk.Toplevel(self.kok)
+        p.title("GhostPilot — " + m("lisans"))
+        p.configure(bg=ARKA)
+        p.geometry("560x480")
+        try:
+            import paketler as PK
+            import lisans as LS
+        except Exception:
+            PK = LS = None
+
+        tk.Label(p, text=m("lisans"), bg=ARKA, fg=METIN,
+                 font=(F, 13, "bold")).pack(anchor="w", padx=22, pady=(20, 4))
+        try:
+            import ghostpilot as G
+            k = (G.CFG.get("license_key") or "").strip()
+            durum = "PRO" if k else "Ücretsiz"
+            kota = G._kota_yukle() if hasattr(G, "_kota_yukle") else {}
+            kullanilan = int(kota.get("used") or 0)
+        except Exception:
+            k, durum, kullanilan = "", "Ücretsiz", 0
+
+        tk.Label(p, text="Durum: %s" % durum, bg=ARKA, fg=YESIL if k else AMBER,
+                 font=(F, 11, "bold")).pack(anchor="w", padx=22)
+        tk.Label(p, text="Bu ay: %d / 20.000 çağrı" % kullanilan, bg=ARKA,
+                 fg=SOLUK, font=(F, 10)).pack(anchor="w", padx=22, pady=(6, 0))
+
+        giris = tk.Frame(p, bg=ARKA)
+        giris.pack(fill="x", padx=22, pady=(16, 0))
+        e = tk.Entry(giris, bg=KART, fg=METIN, insertbackground=METIN,
+                     relief="flat", font=("Consolas", 10))
+        e.pack(side="left", fill="x", expand=True, ipady=8)
+        e.insert(0, k)
+
+        def uygula():
+            v = e.get().strip()
+            try:
+                import ghostpilot as G
+                G.CFG["license_key"] = v
+                G.save_cfg(G.CFG)
+                sonuc.config(text="Kaydedildi.", fg=YESIL)
+            except Exception as ex:
+                sonuc.config(text="Hata: %s" % ex, fg=KIRMIZI)
+
+        tk.Button(giris, text="Uygula", command=uygula, bg=CIZGI, fg=METIN,
+                  relief="flat", bd=0, font=(F, 9, "bold"), cursor="hand2",
+                  padx=14, pady=7).pack(side="left", padx=(8, 0))
+        sonuc = tk.Label(p, text="", bg=ARKA, fg=SOLUK, font=(F, 9), anchor="w")
+        sonuc.pack(fill="x", padx=22, pady=(6, 0))
+
+        if PK:
+            try:
+                tk.Label(p, text=PK.m("baslik"), bg=ARKA, fg=METIN,
+                         font=(F, 11, "bold")).pack(anchor="w", padx=22, pady=(22, 2))
+                tk.Label(p, text=PK.m("ucretsiz") + " — 0",
+                         bg=ARKA, fg=SOLUK, font=(F, 10)).pack(anchor="w", padx=22)
+                tk.Label(p, text="PRO — %d %s / ay" % (PK.AYLIK_FIYAT, PK.PARA_BIRIMI),
+                         bg=ARKA, fg=AMBER, font=(F, 10, "bold")).pack(anchor="w", padx=22,
+                                                                      pady=(4, 0))
+                tk.Label(p, text="Ödeme yok — yalnız bağış. Anahtar bağış yapanlara verilir.",
+                         bg=ARKA, fg=SILIK, font=(F, 9), wraplength=480,
+                         justify="left").pack(anchor="w", padx=22, pady=(6, 0))
+                if getattr(PK, "BAGIS_URL", ""):
+                    tk.Button(p, text="☕  Bağış yap", cursor="hand2",
+                              command=lambda: self._ac_url(PK.BAGIS_URL),
+                              bg="#123222", fg="#86efac", relief="flat", bd=0,
+                              font=(F, 10, "bold"), padx=18, pady=9).pack(anchor="w",
+                                                                          padx=22, pady=(14, 0))
+            except Exception:
+                pass
+        tk.Button(p, text="Kapat", command=p.destroy, bg=CIZGI, fg=METIN,
+                  relief="flat", bd=0, font=(F, 9), padx=18, pady=6).pack(side="bottom",
+                                                                         pady=16)
+
+    @staticmethod
+    def _ac_url(url):
+        try:
+            import webbrowser
+            webbrowser.open(url)
+        except Exception:
+            pass
+
+    # ------------------------------------------------------------- gelişmiş
+    def gelismis_penceresi(self):
+        p = tk.Toplevel(self.kok)
+        p.title("GhostPilot — " + m("gelismis"))
+        p.configure(bg=ARKA)
+        p.geometry("640x540")
+
+        kay = tk.Frame(p, bg=ARKA)
+        kay.pack(fill="both", expand=True, padx=18, pady=14)
+
+        # dil
+        sat = tk.Frame(kay, bg=ARKA)
+        sat.pack(fill="x", pady=(0, 12))
+        tk.Label(sat, text="Dil / Language", bg=ARKA, fg=SOLUK,
+                 font=(F, 9, "bold")).pack(side="left")
+        for kod, etiket in (("tr", "TR"), ("en", "EN"), ("de", "DE"), ("es", "ES")):
+            tk.Button(sat, text=etiket, cursor="hand2",
+                      command=lambda k=kod: self._dil(k, p),
+                      bg=CIZGI, fg=METIN, relief="flat", bd=0,
+                      font=(F, 9, "bold"), padx=10, pady=4).pack(side="left", padx=(6, 0))
+
+        # klasörler
+        tk.Label(kay, text="İZİN VERİLEN KLASÖRLER", bg=ARKA, fg=SOLUK,
+                 font=(F, 8, "bold"), anchor="w").pack(fill="x")
+        self._klasor_liste(kay)
+
+        # mod
+        sat2 = tk.Frame(kay, bg=ARKA)
+        sat2.pack(fill="x", pady=(14, 0))
+        tk.Button(sat2, text="👁  Salt okunur", cursor="hand2",
+                  command=lambda: self._komut("salt-okunur", p),
+                  bg=CIZGI, fg=METIN, relief="flat", bd=0,
+                  font=(F, 9), padx=12, pady=6).pack(side="left")
+        tk.Button(sat2, text="✍  Okuma + yazma", cursor="hand2",
+                  command=lambda: self._komut("yazma", p),
+                  bg=CIZGI, fg=METIN, relief="flat", bd=0,
+                  font=(F, 9), padx=12, pady=6).pack(side="left", padx=8)
+
+        # hata kaydı
+        sat3 = tk.Frame(kay, bg=ARKA)
+        sat3.pack(fill="x", pady=(16, 4))
+        tk.Label(sat3, text="HATA KAYDI", bg=ARKA, fg=SOLUK,
+                 font=(F, 8, "bold")).pack(side="left")
+        tk.Button(sat3, text="Yenile", cursor="hand2",
+                  command=lambda: self._log_yenile(kutu),
+                  bg=CIZGI, fg=METIN, relief="flat", bd=0,
+                  font=(F, 8), padx=10, pady=3).pack(side="right")
+
+        kutu = tk.Text(kay, height=12, bg="#070c17", fg="#cbd5e1", relief="flat",
+                       font=("Consolas", 8), wrap="word")
+        kutu.pack(fill="both", expand=True, pady=(4, 0))
+        self._log_yenile(kutu)
+
+        tk.Button(p, text="Kapat", command=p.destroy, bg=CIZGI, fg=METIN,
+                  relief="flat", bd=0, font=(F, 9), padx=18, pady=6).pack(pady=(0, 14))
+
+    def _klasor_liste(self, ata):
+        try:
+            import ghostpilot as G
+            kokler = (G.CFG.get("read_roots") or []) + (G.CFG.get("write_roots") or [])
+            yaz = set(G.CFG.get("write_roots") or [])
+        except Exception:
+            kokler, yaz = [], set()
+        gorulen = []
+        for k in kokler:
+            if k in gorulen:
+                continue
+            gorulen.append(k)
+            tk.Label(ata, text=("yazma  " if k in yaz else "okuma  ") + k,
+                     bg=ARKA, fg=SOLUK if k not in yaz else METIN,
+                     font=("Consolas", 8), anchor="w").pack(fill="x")
+        if not gorulen:
+            tk.Label(ata, text="—", bg=ARKA, fg=SILIK, font=(F, 9)).pack(anchor="w")
+
+    def _log_yenile(self, kutu):
+        try:
+            icerik = ""
+            if hata and hasattr(hata, "son"):
+                icerik = hata.son(60)
+            if not icerik:
+                icerik = "(kayıt boş — hata yok)"
+        except Exception as e:
+            icerik = str(e)
+        kutu.config(state="normal")
+        kutu.delete("1.0", "end")
+        kutu.insert("end", icerik)
+        kutu.config(state="disabled")
+
+    def _dil(self, kod, pencere=None):
+        try:
+            _D.dil_sec(kod)
+        except Exception:
+            pass
+        if pencere:
+            pencere.destroy()
+        self.kok.title("GhostPilot")
+        self.baslik.config(text=m(self._durum_anahtari()))
+        self.alt.config(text=m("hazir_alt") if self._tunel else m("kapali_alt"))
+        self.dugme.config(text=m("kapat") if self._tunel else m("bagla"))
+        self.not_.config(text=m("alt_not"))
+        self.kopyala_btn.config(text=m("kopyala"))
+
+    def _durum_anahtari(self):
+        return "hazir" if self._tunel else "kapali"
+
+    def _komut(self, ad, pencere=None):
+        def _():
+            try:
+                subprocess.run([sys.executable, os.path.join(BURASI, "kur.py"), ad],
+                               capture_output=True, timeout=60, **SESSIZ)
+            except Exception:
+                pass
+            if pencere:
+                try:
+                    self.kok.after(0, pencere.destroy)
+                except Exception:
+                    pass
+        threading.Thread(target=_, daemon=True).start()
+
+    # ---------------------------------------------------------------- tepsi
     def _tepsi_kur(self):
         try:
             import tepsi
             self.tepsi = tepsi.Tepsi(
-                baslik="GhostPilot", ipucu=t("tepsi_ipucu"),
+                baslik="GhostPilot", ipucu="GhostPilot",
                 solda=lambda: self.kok.after(0, self.goster),
-                sunucu=lambda: self.kok.after(0, self._tepsi_sunucu),
+                sunucu=lambda: self.kok.after(0, self.cikis_tam),
                 cikis=lambda: self.kok.after(0, self.cikis_tam),
                 durum=self._tepsi_durum)
             if self.tepsi.baslat():
-                self.tepsi_durum_guncelle()
+                self.tepsi.guncelle(self._tepsi_durum())
         except Exception:
             self.tepsi = None
 
     def _tepsi_durum(self):
-        try:
-            import kur as K
-            return {"sunucu": bool(K.relay_running()),
-                    "bekci": _gp()._watchdog_alive(),
-                    "metin": self.kota_metin.cget("text")}
-        except Exception:
-            return {}
-
-    def tepsi_durum_guncelle(self):
-        if self.tepsi:
-            try:
-                self.tepsi.guncelle(self._tepsi_durum())
-            except Exception:
-                pass
-
-    def _tepsi_sunucu(self):
-        import kur as K
-        self.komut("durdur" if K.relay_running() else "basla")
-
-    def _otomatik_ac(self):
-        try:
-            import kur as K
-            if not K.relay_running():
-                K.basla(sessiz=True)
-        except Exception:
-            pass
-
-    def _kucult_denetle(self, olay=None):
-        try:
-            if sys.platform.startswith("win") and self.kok.state() == "iconic":
-                self.kok.after(250, self.tepsiye_gizle)
-        except Exception:
-            pass
-
-    def tepsiye_gizle(self):
-        self.kok.withdraw()
-        if self.tepsi:
-            try:
-                self.tepsi.bildir("GhostPilot arka planda",
-                                  "Saat kenarındaki simgeye tıklayarak geri açabilirsiniz.")
-            except Exception:
-                pass
+        return {"sunucu": bool(_calisiyor()), "bekci": False, "metin": ""}
 
     def goster(self):
-        self.kok.deiconify()
-        self.kok.lift()
         try:
+            self.kok.deiconify()
+            self.kok.lift()
             self.kok.focus_force()
         except Exception:
             pass
-        self.yenile()
 
     def cikis_tam(self):
         if self._cikiyor:
             return
         self._cikiyor = True
-        try:
-            if self.tepsi:
-                self.tepsi.durdur()
-        except Exception:
-            pass
-        try:
-            self._mesaj("⏳ " + t("kapatiliyor"), "normal")
-        except Exception:
-            pass
+        # tüneli ve sunucuyu kapat — arkada pythonw süreçleri kalmasın
         try:
             import kur as K
             K.durdur(sessiz=True)
         except Exception:
             pass
         try:
+            if self.tepsi:
+                self.tepsi.durdur()
+        except Exception:
+            pass
+        try:
             self.kok.destroy()
         except Exception:
             pass
-        os._exit(0)
 
 
-TURUNCU = AMBER
-
-
+# ===========================================================================
+#  GİRİŞ
+# ===========================================================================
 def main():
-    # Hata olsa bile pencere KAPANMASIN: sebep ekranda ve hata.log'da görünür.
     if not TK:
         if hata:
             hata.yaz("ui", "tkinter yok — tarayıcı paneli açılıyor")
@@ -877,7 +750,7 @@ def main():
     except Exception:
         pass
     try:
-        Panel(kok, tepsiye_gizle=("--tepsi" in sys.argv))
+        Panel(kok)
     except Exception as e:
         if hata:
             hata.yaz_hata(type(e), e, e.__traceback__, "PANEL OLUŞTURULAMADI")
@@ -900,30 +773,27 @@ def main():
 
 
 def _hata_penceresi(baslik, exc):
-    """Kullanıcıya gösterilecek hata penceresi — pencere anında kapanmasın."""
     yol = hata.yol() if hata else "(günlük yok)"
     try:
-        from tkinter import messagebox, scrolledtext
+        from tkinter import scrolledtext
         p = tk.Tk()
         p.title("GhostPilot — hata")
         p.configure(bg="#0e1628")
-        p.geometry("720x420")
+        p.geometry("700x400")
         tk.Label(p, text=baslik, bg="#0e1628", fg="#f87171",
                  font=("Segoe UI", 13, "bold")).pack(anchor="w", padx=18, pady=(16, 4))
-        tk.Label(p, text=f"{type(exc).__name__}: {exc}", bg="#0e1628", fg="#e2e8f0",
-                 wraplength=680, justify="left", anchor="w",
+        tk.Label(p, text="%s: %s" % (type(exc).__name__, exc), bg="#0e1628",
+                 fg="#e2e8f0", wraplength=660, justify="left", anchor="w",
                  font=("Segoe UI", 9)).pack(anchor="w", padx=18, pady=(0, 10))
-        tk.Label(p, text=f"Ayrıntılar: {yol}", bg="#0e1628", fg="#94a3b8",
+        tk.Label(p, text="Ayrıntılar: " + yol, bg="#0e1628", fg="#94a3b8",
                  font=("Segoe UI", 8)).pack(anchor="w", padx=18)
         kutu = scrolledtext.ScrolledText(p, height=12, bg="#080d1a", fg="#cbd5e1",
-                                         insertbackground="#cbd5e1",
                                          font=("Consolas", 8), relief="flat")
         kutu.pack(fill="both", expand=True, padx=18, pady=10)
         try:
             kutu.insert("end", hata.son(40) if hata else str(exc))
         except Exception:
             kutu.insert("end", str(exc))
-        kutu.configure(state="disabled")
         tk.Button(p, text="Kapat", command=p.destroy, bg="#1e293b", fg="#e2e8f0",
                   relief="flat", padx=22, pady=6).pack(pady=(0, 14))
         p.mainloop()

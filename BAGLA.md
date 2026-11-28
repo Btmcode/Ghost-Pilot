@@ -1,146 +1,100 @@
-# ChatGPT'ye bağlanmak — 3 adım, tek düğme
+# Bağlanmak — tek ekran, tek düğme
 
-Eskiden 13 tıklama vardı. Artık **3 adım** var.
+## 1. Aç
 
----
+Masaüstündeki **👻 GhostPilot** simgesine çift tıkla.
 
-## Adım 1 — Programı açın
+Karşına **tek ekran** çıkar. Üzerinde **tek büyük yeşil düğme** var:
 
-Masaüstündeki **👻 GhostPilot** simgesine **çift tıklayın**.
+> ## 🔗 ChatGPT'ye Bağlan
 
-Pencere açılır. Bir şey yazmanız gerekmiyor.
+## 2. Düğmeye bas
 
-> Pencere açılmazsa: klasördeki **`BASLA.bat`** dosyasına çift tıklayın.
+Bir kez bas. 10–40 saniye bekle.
 
----
-
-## Adım 2 — Tek düğmeye basın
-
-Pencerede **UZAKTAN ERİŞİM** bölümünü bulun. Orada şu düğme var:
-
-> ## 🔗 Bağlantı adresi hazırla
-
-Ona **bir kez** basın. 10–40 saniye bekleyin.
-
-Ekranda şuna benzer bir adres çıkar:
+Ekranda adresin çıkar:
 
 ```
-https://xxxxx-xx-xx-xx-xx.free.pinggy.net/mcp?token=abc123...
+https://xxxxx-xx-xx-xx.free.pinggy.net/mcp?token=abc123...
 ```
 
-Hemen altındaki **📋 Kopyala** düğmesine basın.
+Yanındaki **📋 Adresi Kopyala** düğmesine bas. "✅ Kopyalandı" yazacak.
 
-> ⚠️ Pencere açık kalmalı. Kapatırsanız bağlantı kesilir.
-> Kapatmak isterseniz aynı düğme **⛔ Bağlantı kapat** olur, ona basın.
+## 3. ChatGPT'ye yapıştır
 
----
+Ekranda adımlar zaten yazılı. Sıra şu:
 
-## Adım 3 — ChatGPT'ye yapıştırın
-
-Aşağıdaki sırayı takip edin. Her satır **bir tıklama**.
-
-| # | Nerede | Ne yapacaksınız |
+| # | Nerede | Ne yapacaksın |
 |---|---|---|
-| 1 | ChatGPT'yi açın | Sol alttan **profil resminiz** |
-| 2 | Menü | **Ayarlar** |
-| 3 | Sol menü | **Bağlayıcılar** |
-| 4 | Sağ üst | **Gelişmiş** |
-| 5 | Burada | **Geliştirici modu**nu **açın** |
-| 6 | **Bağlayıcılar**'a dönün | **Oluştur** |
-| 7 | Ad | `GhostPilot` |
-| 8 | Açıklama | `Bilgisayarımdaki dosyalar` |
-| 9 | Sunucu adresi | **Yapıştır** (Ctrl+V) |
-| 10 | Kimlik doğrulama | **Yok** |
-| 11 | Kutuyu işaretleyin | "Anladım ve devam etmek istiyorum" |
-| 12 | **Oluştur** | Bitti |
+| 1 | ChatGPT | **Ayarlar → Bağlayıcılar** |
+| 2 | Sağ üst | **Gelişmiş → Geliştirici modu**nu aç |
+| 3 | **Oluştur** | Adres alanına **yapıştır** |
+| 4 | Kimlik doğrulama | **Yok** |
+| 5 | **Oluştur** | Bitti |
+
+Sonra **yeni sohbet** aç, sohbette **`+`** → **GhostPilot** → yaz:
+
+> ghostpilot_status
+
+## Kapatmak
+
+Aynı düğme artık **⛔ Bağlantıyı Kapat** yazıyor. Ona bas. Programı kapatsan da
+bağlantı kesilir — arkada hiçbir şey kalmaz.
 
 ---
 
-## Deneyin
+## Sık sorulan
 
-ChatGPT'de **yeni sohbet** açın. Sohbette **`+`** işaretine basın → **GhostPilot**'u seçin.
+**Adres değişir mi?** Her bağlandığında değişir. Eski adres çalışmaz.
 
-Sonra yazın:
+**Anahtar nerede?** Adresin içinde (`?token=...`). O yüzden ChatGPT'de
+"Kimlik doğrulama: Yok" seçiyorsun.
 
-> ghostpilot_status aracını çalıştır
+**Adres kimseye gitmiyor mu?** Yalnız senin bilgisayarınla ChatGPT arasında.
+Ekran görüntüsü alırken adresi kapat.
 
-Cevap geldiyse **bağlantı tamam** ✅
-
-Artık şunları yazabilirsiniz:
-
-> Masaüstümdeki dosyaları listele
-
-> Bu projeyi test et ve sonucu söyle
-
-> Ekran görüntüsü al ve ne gördüğünü anlat
+**Yavaş?** İlk cevap 5–10 saniye sürebilir. Normal.
 
 ---
 
-## Ne oldu da bu kadar kolaylaştı?
+## Hiç ücret ödemeden kullanmak istiyorsan
 
-Eskiden **Tailscale** kurmanız, hesap açmanız, tünel adresini elle bulmanız
-gerekiyordu. Şimdi program bunu kendisi yapıyor:
+Şunu bilmen gerekiyor: **ChatGPT'ye bağlanmak ücretli plan istiyor.** Bu bir
+OpenAI kısıtı — özel bağlayıcılar (Connectors) ücretsiz planda açık değil.
 
-- Bilgisayarınızı internete **geçici bir adresle** açar
-- Adresi **anahtarıyla birlikte** hazırlar
-- Siz sadece **kopyalayıp yapıştırıyorsunuz**
+GhostPilot bunu değiştiremez. Ama **tamamen ücretsiz** yollar var:
 
-Tailscale kurmanız **gerekmiyor**. Hesap açmanız **gerekmiyor**.
-Program kendi tünelini kendisi başlatıyor.
+| Program | Ücret | Tünel | Kurulum |
+|---|---|---|---|
+| **Claude Desktop** | ✅ Ücretsiz | ❌ Gerekmez | `python kur.py claude` |
+| **Cursor** | ✅ Ücretsiz | ❌ Gerekmez | `python kur.py cursor` |
+| **VS Code + Copilot** | ✅ Ücretsiz | ❌ Gerekmez | `python kur.py cursor` |
+| ChatGPT (web) | 💳 Plus gerekir | ✅ Gerekir | yukarıdaki 3 adım |
+
+**En kolay ve en ucuz yol: Claude Desktop.**
+
+Aynı bilgisayarda çalıştığı için tünel, hesap, adres — hiçbiri gerekmez.
+GhostPilot'u bir kez bağlarsın, Claude bilgisayarını kullanır. Ücret yok.
+
+Kurulumu:
+
+```
+python kur.py claude
+```
+
+Tek komut. Sonra Claude Desktop'ı aç, bilgisayarını kullanabildiğini görürsün.
 
 ---
 
 ## Bir şey ters giderse
 
-| Ne görüyorsunuz | Sebep | Çözüm |
-|---|---|---|
-| Düğme hiç cevap vermiyor | Sunucu kapalı | **▶ Başlat** düğmesine basın, sonra tekrar deneyin |
-| "Adres açılamadı" | İnternet yok ya da güvenlik duvarı engelliyor | İnterneti kontrol edin; internet varsa 1 dakika sonra tekrar basın |
-| Adres çıktı ama ChatGPT bağlanmıyor | Adres eksik kopyalanmış | **📋 Kopyala** düğmesini kullanın, elle seçmeyin |
-| ChatGPT "Oluştur" düğmesi yok | Geliştirici modu kapalı | Adım 3'ün 5. satırını tekrar yapın |
-| 401 hatası | Anahtar değişmiş | Düğmeye tekrar basıp yeni adresi yapıştırın |
-| Bağlandı ama kullanmıyor | Sohbette seçilmemiş | Sohbette `+` → GhostPilot |
-| Cevaplar çok yavaş | Tünel yavaş | Normaldir; ilk cevap 5–10 saniye sürebilir |
-
-Hâlâ olmuyorsa, GhostPilot klasöründe şunu çalıştırın:
-
-```
-python kur.py hata
-```
-
-Çıkan yazıyı bize gönderin — sorunun ne olduğunu görürüz.
-
----
-
-## Bu güvenli mi?
-
-**Evet.** Şunlara dikkat edin:
-
-1. **Adresi kimseyle paylaşmayın** — içinde erişim anahtarı var
-2. **İşiniz bitince kapatın** — düğme zaten kapatma düğmesine dönüşüyor
-3. **Adres geçicidir** — her açtığınızda değişir, eskisi çalışmaz
-
-Program verilerinizi hiçbir yere göndermez. Adres yalnız sizin bilgisayarınızla
-ChatGPT arasında çalışır.
-
----
-
-## Alternatif: tünel hiç istemiyorsanız
-
-ChatGPT'ye eklemek **zorunlu değil**. Aynı bilgisayarda çalışan programlar
-tünel istemez:
-
-| Program | Nasıl |
+| Ne görüyorsun | Ne yapmalı |
 |---|---|
-| **Claude Desktop** | `python kur.py claude` — 2 dakika, tünel yok |
-| **Cursor / VS Code** | `python kur.py cursor` — tünel yok |
+| Düğme "Adres hazırlanıyor…" de kalıyor | İnterneti kontrol et, 1 dakika sonra tekrar bas |
+| "Bağlanamadı" | Altındaki yazıya bak; genelde internet yok ya da güvenlik duvarı |
+| Adres çıktı ama ChatGPT bağlanmıyor | 📋 Kopyala'yı kullan, elle seçme (uzun adres kolay eksilir) |
+| ChatGPT'de "Oluştur" yok | Geliştirici modu kapalı — 2. satırı tekrar yap |
+| 401 hatası | Düğmeye tekrar bas, yeni adresi yapıştır |
 
-Bunlar aynı bilgisayarda çalıştığı için köprüye hiç gerek yok. En hızlı yol bunlar.
-
----
-
-## Not
-
-Bu tarif **Windows** içindir. Tünel ve panel bizim test ortamımızda çalıştırıldı
-ve doğrulandı; Windows'ta masaüstü kısayolu ve tepsi simgesi ilk kurulumda
-bir aksilik çıkarırsa `python kur.py hata` çıktısını bize iletin.
+Hâlâ olmuyorsa: **Gelişmiş** düğmesine bas. Hata kaydı orada yazılı.
+Kopyalayıp bana gönder, bakarım.

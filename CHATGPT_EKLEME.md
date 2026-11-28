@@ -1,11 +1,9 @@
-# ChatGPT'ye GhostPilot ekleme — resimli tarif gibi, adım adım
+# ChatGPT'ye GhostPilot ekleme
 
-> **Önce `BAGLA.md` dosyasına bakın.** Orada 3 adımlı, tek düğmeli yol var.
-> Bu belge, o yol çalışmazsa kullanılacak ayrıntılı (Tailscale'li) yöntemi anlatır.
+> **Kolay yol `BAGLA.md` dosyasında.** Programı aç, tek düğmeye bas, adresi
+> ChatGPT'ye yapıştır. Bu belgeye yalnız tek düğme çalışmazsa bakın.
 
-Bu belge ChatGPT'nin **kendi sohbet ekranından** bilgisayarınıza bağlanmasını anlatır.
 
----
 
 ## Önce şunu bilin
 
@@ -19,16 +17,21 @@ ChatGPT  ──internet──►  köprü (sizin adresiniz)  ──►  sizin bi
 Köprüyü kurmak için **Tailscale** adlı ücretsiz bir program kullanılır.
 Tek seferlik iş. Sonra ChatGPT her sohbette bilgisayarınıza erişebilir.
 
+
 ---
 
 ## Gerekenler
 
 | Ne | Şart mı | Not |
-|---|---|---|
+|
+---|
+---|
+---|
 | GhostPilot kurulu olmalı | ✅ Evet | `KURULUM.bat` |
 | ChatGPT **Plus / Pro / Business** | ✅ Evet | Ücretsiz planda bu bölüm yok |
 | Tailscale hesabı | ✅ Evet | Ücretsiz, 1 dakikalık kayıt |
 | İnternet | ✅ Evet | |
+
 
 ---
 
@@ -41,6 +44,7 @@ Tek seferlik iş. Sonra ChatGPT her sohbette bilgisayarınıza erişebilir.
 
 > Kurulum kendisi her şeyi hazırlar. Python kurulu mu diye bakmanıza gerek yok.
 
+
 ---
 
 ## Adım 2 — Tailscale'i kurun
@@ -50,6 +54,7 @@ Tek seferlik iş. Sonra ChatGPT her sohbette bilgisayarınıza erişebilir.
 3. İndirdiğiniz dosyaya **çift tıklayın** → **Install**.
 4. Kurulunca **Log in** → Google/Microsoft hesabıyla giriş yapın.
 5. Ekranın sağ alt köşesinde Tailscale simgesi görünür → hazır.
+
 
 ---
 
@@ -68,6 +73,7 @@ Anahtar: abc123...
 > ⚠️ **Bu pencereyi kapatmayın.** Kapatırsanız ChatGPT bağlantısı kesilir.
 > Bilgisayar kapanınca da kesilir — tekrar açmanız yeterli.
 
+
 ---
 
 ## Adım 4 — ChatGPT'ye ekleyin
@@ -75,7 +81,10 @@ Anahtar: abc123...
 Aşağıdaki sırayı **birebir** takip edin. Her satır bir tıklama.
 
 | # | Nerede | Ne yapacaksınız |
-|---|---|---|
+|
+---|
+---|
+---|
 | 1 | ChatGPT'yi açın | Sol alttaki **profil resminize** tıklayın |
 | 2 | Açılan menü | **Ayarlar** (Settings) |
 | 3 | Sol menü | **Bağlayıcılar** (Connectors) |
@@ -92,6 +101,7 @@ Aşağıdaki sırayı **birebir** takip edin. Her satır bir tıklama.
 
 > Adresin içinde anahtar zaten var. O yüzden "Kimlik doğrulama" alanında
 > **Yok** seçiyorsunuz. Ayrı anahtar girmeniz gerekmiyor.
+
 
 ---
 
@@ -113,18 +123,23 @@ Sonra gerçek işler:
 
 > Şu projeyi test et ve sonucu söyle
 
+
 ---
 
 ## Bir şey ters giderse
 
 | Ne görüyorsunuz | Sebep | Çözüm |
-|---|---|---|
+|
+---|
+---|
+---|
 | **Oluştur** düğmesi yok | Geliştirici modu kapalı ya da ücretsiz plan | Adım 4'ün 5. satırını tekrar yapın; planı kontrol edin |
 | "Bağlanılamadı" | Adres yanlış ya da köprü kapalı | Adım 3'teki pencere açık mı? Adresi baştan kopyalayın |
 | 401 / yetkisiz | Anahtar değişmiş | `python kur.py token` → yeni adresi kopyalayıp ChatGPT'de adresi güncelleyin |
 | Bağlandı ama hiç kullanmıyor | Sohbette seçilmemiş | Sohbette `+` → GhostPilot'u seçin, ya da soruda adını yazın |
 | Hepsi tamam, cevap yok | Bilgisayar uyuyor | Bilgisayarı açık tutun, ekran kilidini açın |
 | Kurulumda hata | — | `python kur.py hata` → çıkan yazıyı bize gönderin |
+
 
 ---
 
@@ -138,6 +153,7 @@ Sonra gerçek işler:
 Anahtar sadece sizin bilgisayarınızda ve sizin ChatGPT hesabınızda durur.
 GhostPilot hiçbir veriyi kendi sunucusuna göndermez.
 
+
 ---
 
 ## Tünel istemiyorsanız — daha kolay yollar
@@ -145,7 +161,10 @@ GhostPilot hiçbir veriyi kendi sunucusuna göndermez.
 ChatGPT'ye eklemek **zorunlu değil**. Tailscale kurmak istemiyorsanız:
 
 | Program | Komut | Tünel gerekir mi |
-|---|---|---|
+|
+---|
+---|
+---|
 | **Claude Desktop** | `python kur.py claude` | ❌ Hayır |
 | **Cursor / VS Code** | `python kur.py cursor` | ❌ Hayır |
 | **Aynı Wi-Fi'daki telefon** | `192.168.x.x:17381/mcp` | ❌ Hayır |
@@ -153,6 +172,7 @@ ChatGPT'ye eklemek **zorunlu değil**. Tailscale kurmak istemiyorsanız:
 
 Claude ve Cursor aynı bilgisayarda çalıştığı için köprüye gerek yok —
 GhostPilot'u doğrudan başlatıp kullanabilirsiniz.
+
 
 ---
 

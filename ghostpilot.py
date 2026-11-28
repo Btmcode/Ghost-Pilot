@@ -123,10 +123,16 @@ import subprocess
 import sys
 import threading
 import time
+
+
+# Windows'ta alt süreçler konsol penceresi açmasın (pythonw.exe yanıp sönmesin)
+SESSIZ = {}
+if sys.platform.startswith("win"):
+    SESSIZ["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
-VERSION = "5.17.0"
+VERSION = "5.18.0"
 
 # Windows konsolu varsayılan olarak cp1254/cp1252 kullanır ve emoji yazınca
 # UnicodeEncodeError ile çöker. Hem kendimiz hem alt süreçler için UTF-8'e geç.
@@ -3247,6 +3253,7 @@ img{{border-radius:10px}}
             kw["creationflags"] = 0x00000008 | 0x00000200  # DETACHED | NEW_PROCESS_GROUP
         else:
             kw["start_new_session"] = True
+        kw.update(SESSIZ)
         return subprocess.Popen(cmd, stdout=f, stderr=f, stdin=subprocess.DEVNULL, **kw)
 
     def _ssh_tunel(self, port, tok):
@@ -3744,6 +3751,32 @@ def _start_scheduler():
         return False
 
 
+def _relay_kilidi_al(port):
+    """Ayni portta ikinci relay acilmasin. Windows'ta SO_REUSEADDR yuzunden
+    ayni porta iki surec baglanabiliyor; bu yuzden ayri bir kilit dosyasi."""
+    lp = os.path.join(CFG_DIR, "relay-%s.lock" % port)
+    try:
+        _mkdir(CFG_DIR)
+        f = open(lp, "w")
+    except Exception:
+        return None
+    try:
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except Exception:
+        return None
+    try:
+        f.write(str(os.getpid()))
+        f.flush()
+    except Exception:
+        pass
+    return f
+
+
 def run_relay(port=None, host="127.0.0.1"):
     global RELAY_HOST
     RELAY_HOST = host
@@ -3755,9 +3788,18 @@ def run_relay(port=None, host="127.0.0.1"):
             os.remove(sf)
     except Exception:
         pass
+    _kilit = _relay_kilidi_al(port)
+    if _kilit is None:
+        # zaten calisan bir sunucu var — sessizce cik (pencereler acilip kapanmasin)
+        try:
+            import urllib.request
+            with urllib.request.urlopen("http://127.0.0.1:%s/health" % port, timeout=2):
+                return 0
+        except Exception:
+            pass
     srv = ThreadingHTTPServer((host, port), RelayHandler)
     srv.daemon_threads = True
-    _kapanis_hazirla(srv, port)
+    _kapanis_hazirla(srv, port, host)
     _start_scheduler()
     if _overlay_up():
         print("  İşlem imleci  : açık — hayalet imleç + şerit")
@@ -3819,13 +3861,18 @@ def _port_free(port):
 _PID_DOSYA = None
 
 
-def _kapanis_hazirla(srv, port):
+def _kapanis_hazirla(srv, port, host="127.0.0.1"):
     """Sinyalleri yakala + pid dosyası yaz → arkada süreç kalmaz."""
     global _PID_DOSYA
     try:
         _PID_DOSYA = os.path.join(CFG_DIR, "relay.pid")
         with open(_PID_DOSYA, "w", encoding="utf-8") as f:
             f.write(str(os.getpid()))
+        # arayüz hangi adrese bağlandığımızı bilsin (bağla/kapat doğru çalışsın)
+        with open(os.path.join(CFG_DIR, "relay-host"), "w", encoding="utf-8") as f:
+            f.write(host or "127.0.0.1")
+    except Exception:
+        _PID_DOSYA = None
     except Exception:
         _PID_DOSYA = None
 
@@ -3871,17 +3918,12 @@ def run_watchdog(port=None):
     lock = os.path.join(CFG_DIR, "watchdog.pid")
     _mkdir(CFG_DIR)
 
-    # tek örnek
+    # tek örnek — GERÇEK kilit (pid dosyası yarış durumuna açıktı)
+    _kilit = _relay_kilidi_al("watchdog")
+    if _kilit is None:
+        print("[bekçi] zaten çalışıyor — çıkılıyor", flush=True)
+        return 0
     try:
-        if os.path.exists(lock):
-            old = int(open(lock).read().strip() or 0)
-            if old and old != os.getpid():
-                try:
-                    os.kill(old, 0)
-                    print(f"[bekçi] zaten çalışıyor (pid {old}) — çıkılıyor", flush=True)
-                    return 0
-                except OSError:
-                    pass
         open(lock, "w").write(str(os.getpid()))
     except Exception:
         pass
@@ -3901,9 +3943,24 @@ def run_watchdog(port=None):
             pass
         return 0
 
+    # portta SAĞLIKLI bir sunucu zaten varsa bekçiye gerek yok — sessizce çık
+    try:
+        import urllib.request
+        with urllib.request.urlopen("http://127.0.0.1:%s/health" % port, timeout=2) as _r:
+            if _r.status == 200:
+                print("[bekçi] sunucu zaten çalışıyor — çıkılıyor", flush=True)
+                try:
+                    os.remove(lock)
+                except Exception:
+                    pass
+                return 0
+    except Exception:
+        pass
+
     print(f"[bekçi] GhostPilot v{VERSION} — port {port} izleniyor", flush=True)
     fails = 0
     child = None
+    son_baslangic = 0.0
     try:
         while True:
             if durduruldu():
@@ -3921,10 +3978,19 @@ def run_watchdog(port=None):
                 return 0
             if child is not None and child.poll() is not None:
                 code = child.returncode
-                print(f"[bekçi] relay durdu (çıkış {code}) — yeniden başlatılıyor", flush=True)
+                # anında olum = gercek sorun. 5 kez ust uste olursa dur.
+                hizli = (time.time() - son_baslangic) < 8
+                fails = fails + 1 if hizli else 0
                 child = None
-                time.sleep(min(30, 2 ** min(fails, 4)))
-                fails += 1
+                if fails >= 5:
+                    print("[bekçi] relay üst üste 5 kez hemen kapandı — "
+                          "döngü DURDURULDU. Sebep için: python kur.py hata", flush=True)
+                    try:
+                        os.remove(lock)
+                    except Exception:
+                        pass
+                    return 1
+                time.sleep(min(20, 2 ** min(fails, 4)) if fails else 1)
 
             if child is None and _port_free(port):
                 try:
@@ -3934,8 +4000,9 @@ def run_watchdog(port=None):
                     child = subprocess.Popen(
                         [sys.executable, os.path.abspath(__file__), "relay",
                          "--port", str(port)],
-                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **kw)
-                    fails = 0
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                        **dict(kw, **SESSIZ))
+                    son_baslangic = time.time()
                     print(f"[bekçi] relay başladı (pid {child.pid})", flush=True)
                 except Exception as e:
                     print(f"[bekçi] başlatılamadı: {e}", flush=True)
