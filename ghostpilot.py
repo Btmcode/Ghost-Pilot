@@ -114,6 +114,7 @@ import io as _io
 import json
 import os
 import platform
+import re
 import secrets
 import shutil
 import socket
@@ -125,7 +126,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
-VERSION = "5.16.0"
+VERSION = "5.17.0"
 
 # Windows konsolu varsayılan olarak cp1254/cp1252 kullanır ve emoji yazınca
 # UnicodeEncodeError ile çöker. Hem kendimiz hem alt süreçler için UTF-8'e geç.
@@ -1225,8 +1226,14 @@ def gorev_dongu(durdur_flag=None):
     """Sunucu içinde arka planda çalışan zamanlayıcı."""
     while True:
         try:
-            if durdur_flag is not None and durdur_flag():
-                return
+            # 'durdur' adli bir gorev varsa o da kapanis istegi sayilir
+            if durdur_flag is not None and callable(durdur_flag):
+                try:
+                    if durdur_flag("durdur") or durdur_flag("stop"):
+                        return
+                except TypeError:
+                    if durdur_flag():
+                        return
             if _durduruldu_bayragi():
                 return
             with GOREV_KILIT:
@@ -2578,6 +2585,24 @@ th{color:var(--soluk);font-weight:600;font-size:12px}
   <div id="sonuc" class="alt" style="margin:10px 0 0"></div>
 </div>
 
+<div class="bolum" id="baglaBolum">
+  <h2>🔌 ChatGPT'ye / başka programa bağla — 2 adım</h2>
+  <p class="alt" style="margin:0 0 10px">Bilgisayariniz internete kapaliysa ChatGPT ulasamaz.
+     Asagidaki dugme sizin icin gecici bir adres acar; kopyalayip ChatGPT'ye yapistirirsiniz.</p>
+  <button type="button" class="amber" onclick="eylem('bagla',this)">🔗 Baglanti adresini hazirla</button>
+  <button type="button" class="gri" onclick="kopyalaUrl(this)">📋 Adresi kopyala</button>
+  <div id="baglaSonuc" class="alt" style="margin-top:8px"></div>
+  <div id="baglaKutu" style="display:none;margin-top:12px">
+    <table>
+      <tr><th style="width:150px">Sunucu adresi</th>
+          <td><code id="baglaUrl" style="word-break:break-all"></code></td></tr>
+      <tr><th>Kimlik dogrulama</th><td><b>Yok</b> (anahtar adresin icinde)</td></tr>
+      <tr><th>Ne yapmali</th><td>ChatGPT &#8594; Ayarlar &#8594; Baglayicilar &#8594; Olustur
+          &#8594; adres alanina yapistir &#8594; <b>Olustur</b></td></tr>
+    </table>
+  </div>
+</div>
+
 <div class="bolum">
   <h2>Mod</h2>
   <button class="gril" onclick="eylem('salt-okunur')" id="bSalt">👁 Salt okunur</button>
@@ -2607,6 +2632,13 @@ function durumYaz(){
   e.textContent = kapali ? '⛔ ERİŞİM KAPALI' : '✅ ERİŞİM AÇIK';
   e.style.background = kapali ? '#3a1010' : '#0d2f1f';
   e.style.color = kapali ? '#f87171' : '#4ade80';
+}
+let sonUrl = '';
+function kopyalaUrl(btn){
+  if(!sonUrl){ eylem('bagla', btn); return; }
+  (navigator.clipboard ? navigator.clipboard.writeText(sonUrl) : Promise.reject())
+    .then(function(){ document.getElementById('baglaSonuc').textContent = '✅ Adres kopyalandi.'; })
+    .catch(function(){ window.prompt('Adresi kopyalayin (Ctrl+C):', sonUrl); });
 }
 async function yukle(){
   try{
@@ -2692,6 +2724,28 @@ async function eylem(k, btn){
     if(out){ out.textContent = '⏳ işleniyor…'; out.style.color = '#8b9bb4'; }
     const r = await fetch('/panel/eylem?k='+encodeURIComponent(k), {method:'POST'});
     const d = await r.json();
+    const msg = String(d.message || 'tamam');
+    if(k === 'bagla'){
+      const box = document.getElementById('baglaSonuc');
+      const kutu = document.getElementById('baglaKutu');
+      if(msg.indexOf('BAGLANDI|') === 0){
+        const p = msg.split('|');
+        sonUrl = p[2] || '';
+        document.getElementById('baglaUrl').textContent = sonUrl;
+        kutu.style.display = 'block';
+        box.textContent = '✅ Adres hazir (' + p[1] + '). Kopyalayip ChatGPT ekranina yapistirin.';
+        box.style.color = '#22c55e';
+      } else if(msg.indexOf('TUNEL_KAPATILDI') === 0){
+        sonUrl = ''; kutu.style.display = 'none';
+        box.textContent = 'Tunel kapatildi.'; box.style.color = '#8b9bb4';
+      } else {
+        box.textContent = '⚠️ ' + msg.replace('TUNEL_YOK|','');
+        box.style.color = '#f59e0b';
+      }
+      if(btn){ btn.disabled = false; btn.style.opacity = 1; }
+      if(out){ out.textContent = ''; }
+      return;
+    }
     if(out){
       out.textContent = (d.ok === false ? '⚠️ ' : '✅ ') + (d.message || 'tamam');
       out.style.color = d.ok === false ? '#ef4444' : '#22c55e';
@@ -3012,6 +3066,23 @@ img{{border-radius:10px}}
                 pass
             return (f"⛔ Uzaktan erişim KESİLDİ. {n} izin silindi. Panel açık, "
                     "isterseniz 'Yeniden başlat' ile geri açabilirsiniz.")
+        if k == "bagla":
+            d = self._tunel_bilgi()
+            kapat = (d.get("url") or "") if self._tunel_canli(d) else ""
+            if kapat:
+                self._tunel_durdur()
+                return "TUNEL_KAPATILDI"
+            url, tip = self._tunel_baslat()
+            if url:
+                return "BAGLANDI|" + tip + "|" + url
+            if tip == "yok":
+                return ("TUNEL_YOK|Bu bilgisayarda tunel araci yok. En kolay yol: "
+                        "ChatGPT yerine Claude Desktop kullanmak (tunel gerekmez) — "
+                        "python kur.py claude")
+            return ("TUNEL_YOK|Adres acilamadi. Tailscale'e giris yapip tekrar deneyin "
+                    "(python kur.py tailscale-kur) veya Cloudflare kurun.")
+        if k == "mesaj-kopyala":
+            return "OK"
         if k == "sunucu-kapat":
             threading.Thread(target=self._panel_stop, daemon=True).start()
             return "Sunucu tamamen kapatılıyor…"
@@ -3045,6 +3116,184 @@ img{{border-radius:10px}}
                 return r.status == 200
         except Exception:
             return False
+
+    # ---- disariya acilan gecici tunel (tek dugme) ----
+    def _tunel_bilgi(self):
+        d = {"url": "", "pid": None, "tip": ""}
+        try:
+            with open(os.path.join(CFG_DIR, "tunel.json"), encoding="utf-8") as f:
+                d.update(json.load(f) or {})
+        except Exception:
+            pass
+        return d
+
+    def _tunel_yaz(self, d):
+        try:
+            with open(os.path.join(CFG_DIR, "tunel.json"), "w", encoding="utf-8") as f:
+                json.dump(d, f)
+        except Exception:
+            pass
+
+    def _tunel_canli(self, d):
+        """Kayitli tunel gercekten ayakta mi? (olu pid / bos url = degil)"""
+        pid = d.get("pid")
+        if not pid:
+            return bool(d.get("url"))  # tailscale: pid yok, adres varsa acik say
+        try:
+            if os.name == "nt":
+                r = subprocess.run(["tasklist", "/FI", "PID eq %s" % pid],
+                                   capture_output=True, text=True, timeout=10)
+                return str(pid) in (r.stdout or "")
+            os.kill(int(pid), 0)
+            return True
+        except Exception:
+            return False
+
+    def _tunel_durdur(self):
+        d = self._tunel_bilgi()
+        pid = d.get("pid")
+        if pid:
+            try:
+                if os.name == "nt":
+                    subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)],
+                                   capture_output=True, timeout=15)
+                else:
+                    try:
+                        os.killpg(os.getpgid(int(pid)), 9)
+                    except Exception:
+                        os.kill(int(pid), 9)
+            except Exception:
+                pass
+        self._tunel_yaz({"url": "", "pid": None, "tip": ""})
+        return True
+
+    def _tunel_baslat(self):
+        """Disaridan erisilebilir HTTPS adresi acar. Tailscale varsa onu,
+        yoksa Cloudflare hizli tuneli dener. Adresi dondurur."""
+        port = int(CFG.get("port") or DEFAULT_PORT)
+        tok = ""
+        try:
+            tok = open(os.path.join(CFG_DIR, "token"), encoding="utf-8").read().strip()
+        except Exception:
+            pass
+
+        # 1) Tailscale (kurulu ve girisli ise en saglam yol)
+        try:
+            import kur as K
+            ts = K.tailscale_bin()
+            if ts:
+                subprocess.run([ts, "funnel", "--bg", str(port)],
+                               capture_output=True, timeout=90)
+                r = subprocess.run([ts, "status", "--json"],
+                                   capture_output=True, text=True, timeout=30)
+                dns = (json.loads(r.stdout or "{}").get("Self") or {}).get("DNSName") or ""
+                if dns:
+                    url = "https://" + dns.rstrip(".") + "/mcp"
+                    if tok:
+                        url += "?token=" + tok
+                    self._tunel_yaz({"url": url, "pid": None, "tip": "tailscale"})
+                    return url, "tailscale"
+        except Exception:
+            pass
+
+        # 1b) SSH ile ucretsiz tunel (Windows 10/11'de ssh hazir gelir)
+        url, tip = self._ssh_tunel(port, tok)
+        if url:
+            return url, tip
+
+        # 2) Cloudflare hizli tunel (hesap gerekmez)
+        exe = shutil.which("cloudflared")
+        if not exe and os.name == "nt":
+            for c in (os.path.join(os.environ.get("ProgramFiles", ""), "cloudflared", "cloudflared.exe"),
+                      os.path.join(os.environ.get("LOCALAPPDATA", ""), "cloudflared", "cloudflared.exe")):
+                if os.path.exists(c):
+                    exe = c
+                    break
+        if not exe:
+            return "", "yok"
+        try:
+            logp = os.path.join(CFG_DIR, "tunel.log")
+            pr = self._popen_arka(
+                [exe, "tunnel", "--url", "http://127.0.0.1:%d" % port, "--no-autoupdate"], logp)
+            for _ in range(40):
+                time.sleep(1)
+                try:
+                    with open(logp, encoding="utf-8", errors="replace") as lf:
+                        t = lf.read()
+                except Exception:
+                    t = ""
+                m = re.search(r"https://[a-z0-9-]+\.trycloudflare\.com", t)
+                if m:
+                    url = m.group(0) + "/mcp"
+                    if tok:
+                        url += "?token=" + tok
+                    self._tunel_yaz({"url": url, "pid": pr.pid, "tip": "cloudflare"})
+                    return url, "cloudflare"
+                if pr.poll() is not None:
+                    break
+            try:
+                pr.kill()
+            except Exception:
+                pass
+        except Exception:
+            pass
+        return "", "hata"
+
+    def _popen_arka(self, cmd, logp):
+        """Arka planda, kendi surec grubunda calistir (durdururken hepsi olur)."""
+        f = open(logp, "w", encoding="utf-8", errors="replace")
+        kw = {}
+        if os.name == "nt":
+            kw["creationflags"] = 0x00000008 | 0x00000200  # DETACHED | NEW_PROCESS_GROUP
+        else:
+            kw["start_new_session"] = True
+        return subprocess.Popen(cmd, stdout=f, stderr=f, stdin=subprocess.DEVNULL, **kw)
+
+    def _ssh_tunel(self, port, tok):
+        """ssh -R ile ucretsiz HTTPS adres (pinggy / localhost.run). Hesap gerekmez."""
+        ssh = shutil.which("ssh") or (r"C:\Windows\System32\OpenSSH\ssh.exe"
+                                      if os.path.exists(r"C:\Windows\System32\OpenSSH\ssh.exe") else None)
+        if not ssh:
+            return "", ""
+        secenekler = [ssh, "-o", "StrictHostKeyChecking=no", "-o", "ServerAliveInterval=20",
+                      "-o", "ExitOnForwardFailure=yes", "-o", "LogLevel=INFO"]
+        saglayicilar = [
+            ("pinggy", secenekler + ["-p", "443", "-R0:127.0.0.1:%d" % port, "a.pinggy.io"],
+             r"https://[a-z0-9-]+\.(?:free\.pinggy\.net|run\.pinggy-free\.link|pinggy\.link)"),
+            ("localhost.run", secenekler + ["-R", "80:127.0.0.1:%d" % port, "nokey@localhost.run"],
+             r"https://[a-z0-9-]+\.lhr\.life"),
+        ]
+        for ad, cmd, desen in saglayicilar:
+            logp = os.path.join(CFG_DIR, "tunel-%s.log" % ad)
+            try:
+                pr = self._popen_arka(cmd, logp)
+            except Exception:
+                continue
+            for _ in range(35):
+                time.sleep(1)
+                try:
+                    with open(logp, encoding="utf-8", errors="replace") as lf:
+                        t = lf.read()
+                except Exception:
+                    t = ""
+                m = re.search(desen, t)
+                if m:
+                    url = m.group(0) + "/mcp"
+                    if tok:
+                        url += "?token=" + tok
+                    self._tunel_yaz({"url": url, "pid": pr.pid, "tip": ad})
+                    return url, ad
+                if pr.poll() is not None:
+                    break
+            try:
+                pr.kill()
+            except Exception:
+                pass
+            try:
+                os.remove(os.path.join(CFG_DIR, "tunel.json"))
+            except Exception:
+                pass
+        return "", ""
 
     def _panel_stop(self):
         time.sleep(0.4)

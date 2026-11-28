@@ -11,7 +11,7 @@ GhostPilot connects ChatGPT, Claude, Cursor and any MCP-compatible assistant to 
 
 ## Badges
 
-![Version](https://img.shields.io/badge/version-5.16.0-22d3ee)
+![Version](https://img.shields.io/badge/version-5.17.0-22d3ee)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![Tools](https://img.shields.io/badge/tools-44-f59e0b)

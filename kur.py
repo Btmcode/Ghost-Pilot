@@ -1597,17 +1597,22 @@ def _cfg_yaz(d):
 
 
 def panel():
-    """Yerel paneli açar (tarayıcıda durum + DURDUR + onay)."""
-    head("Yerel panel")
+    """Paneli açar. Sunucu kapalıysa başlatır, sonra tarayıcıyı açar."""
+    head("Panel")
     d = _cfg_oku()
     port = int(d.get("port") or 17381)
     url = f"http://127.0.0.1:{port}/panel"
-    r = py(["doctor"])
-    if "Sunucu çalışıyor" not in (r.stdout or ""):
-        say("  Sunucu kapalı — önce başlatılıyor…", "warn")
-        basla()
+    if not relay_running(port):
+        say("  Sunucu kapalı — başlatılıyor…", "warn")
+        basla(sessiz=True)
+        for _ in range(30):
+            if relay_running(port):
+                break
+            import time as _t
+            _t.sleep(0.5)
     say(f"\n  Panel adresi : {url}")
-    say("  Yalnız bu bilgisayardan açılır.", "dim")
+    say("  Tarayıcıda açılıyor…", "dim")
+    say("  Bağlanmak için paneldeki '🔗 Bağlantı adresini hazırla' düğmesine basın.", "dim")
     try:
         import webbrowser
         webbrowser.open(url)
@@ -2004,8 +2009,9 @@ def menu():
     while True:
         head("GhostPilot — bilgisayarınız için sessiz yardımcı")
         say("""
-  1) Claude Desktop'a bağla        (en kolay, tünel gerekmez)
-  2) ChatGPT / tarayıcı AI'ya bağla (Tailscale ile HTTPS tünel)
+  1) 🔗 BAĞLA — paneli aç, tek düğmeyle adres üret (EN KOLAY)
+  1b) Claude Desktop'a bağla       (tünel gerekmez, 2 dakika)
+  2) ChatGPT / tarayıcı AI'ya bağla (Tailscale ile, adım adım)
   3) Cursor / VS Code'a bağla
   4) Kurulumu denetle (doctor)
   5) Yeni erişim anahtarı
@@ -2047,6 +2053,8 @@ def menu():
             print()
             return 0
         if sec == "1":
+            return panel()
+        if sec == "1b":
             install_client("claude")
         elif sec == "2":
             chatgpt_setup()

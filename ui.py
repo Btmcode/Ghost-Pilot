@@ -134,6 +134,7 @@ class Panel:
         self.otomatik = True
         self._sayfa = {}
         self._aktif = None
+        self._tunel_var = False
 
         kok.title("GhostPilot")
         kok.configure(bg=ARKA)
@@ -289,6 +290,23 @@ class Panel:
         self.btn_basla = dugme(alt, "▶  Başlat", lambda: self.komut("basla"), "basari")
         self.btn_basla.pack(side="left", padx=8)
         dugme(alt, t("yenile"), self.yenile).pack(side="left")
+
+        # ---- tek düğme: bağlantı adresi hazırla
+        bag = tk.Frame(ic, bg=KART)
+        bag.pack(fill="x", pady=(12, 0))
+        self.btn_bagla = dugme(bag, "🔗  Bağlantı adresi hazırla", self.bagla, "basari")
+        self.btn_bagla.pack(side="left")
+        dugme(bag, "📋  Kopyala", self.bagla_kopyala).pack(side="left", padx=8)
+        self.bagla_mesaj = tk.Label(ic, text="", bg=KART, fg=SOLUK, font=(F, 9),
+                                    anchor="w", justify="left", wraplength=780)
+        self.bagla_mesaj.pack(fill="x", pady=(9, 0))
+        self.adres = tk.Entry(ic, bg="#0d1626", fg="#a5d6ff", insertbackground=METIN,
+                              readonlybackground="#0d1626", disabledbackground="#0d1626",
+                              relief="flat", font=("Consolas", 9))
+        self.adres.pack(fill="x", pady=(6, 0), ipady=6)
+        self.adres.insert(0, "")
+        self.adres.config(state="readonly")
+
         self.erisim_mesaj = tk.Label(ic, text="", bg=KART, fg=SOLUK, font=(F, 9),
                                      anchor="w", justify="left", wraplength=780)
         self.erisim_mesaj.pack(fill="x", pady=(9, 0))
@@ -492,6 +510,99 @@ class Panel:
                     dugm.config(state="normal")
             self.yenile()
         threading.Thread(target=_, daemon=True).start()
+
+    # ------------------------------------------------------------------ bağla
+    def bagla(self):
+        """Tek düğme: panelde bağlantı adresi üretir (tünel açar)."""
+        if getattr(self, "_tunel_var", False):
+            self._tunel_kapat()
+            return
+        self.btn_bagla.config(state="disabled")
+        self.bagla_mesaj.config(text="⏳ Adres hazırlanıyor… (10–40 saniye)", fg=SOLUK)
+
+        def _():
+            try:
+                import json as _j
+                import urllib.request as _u
+                port = 17381
+                try:
+                    p = os.path.join(os.path.expanduser("~"), ".ghostpilot", "config.json")
+                    port = int(_j.load(open(p, encoding="utf-8")).get("port") or port)
+                except Exception:
+                    pass
+                r = _u.Request(f"http://127.0.0.1:{port}/panel/eylem?k=bagla", method="POST")
+                with _u.urlopen(r, timeout=150) as f:
+                    d = _j.loads(f.read().decode("utf-8", "replace"))
+                msg = str(d.get("message") or "")
+                if msg.startswith("BAGLANDI|"):
+                    adres = msg.split("|")[2]
+                    self._tunel_var = True
+                    self.kok.after(0, lambda: self._adres_goster(adres, True))
+                elif msg.startswith("TUNEL_KAPATILDI"):
+                    self._tunel_var = False
+                    self.kok.after(0, lambda: self._adres_goster("", False))
+                else:
+                    hata = msg.split("|", 1)[-1]
+                    self.kok.after(0, lambda: self.bagla_mesaj.config(
+                        text="⚠️ " + hata, fg=KIRMIZI))
+            except Exception as e:
+                self.kok.after(0, lambda: self.bagla_mesaj.config(
+                    text=f"⚠️ Sunucu yanıt vermedi ({e}). Önce 'Başlat'a basın.", fg=KIRMIZI))
+            finally:
+                self.kok.after(0, lambda: self.btn_bagla.config(
+                    state="normal",
+                    text=("⛔  Bağlantıyı kapat" if getattr(self, "_tunel_var", False)
+                          else "🔗  Bağlantı adresi hazırla")))
+        threading.Thread(target=_, daemon=True).start()
+
+    def _adres_goster(self, adres, acik):
+        self.adres.config(state="normal")
+        self.adres.delete(0, "end")
+        self.adres.insert(0, adres)
+        self.adres.config(state="readonly")
+        if acik:
+            self.bagla_mesaj.config(
+                text="✅ Adres hazır. Kopyalayın, ChatGPT'de Bağlayıcılar → Oluştur "
+                     "ekranına yapıştırın. Kimlik doğrulama: Yok.", fg=YESIL)
+        else:
+            self.bagla_mesaj.config(text="Bağlantı kapatıldı.", fg=SOLUK)
+
+    def _tunel_kapat(self):
+        self.btn_bagla.config(state="disabled")
+        self.bagla_mesaj.config(text="⏳ Kapatılıyor…", fg=SOLUK)
+
+        def _():
+            try:
+                import json as _j
+                import urllib.request as _u
+                port = 17381
+                try:
+                    p = os.path.join(os.path.expanduser("~"), ".ghostpilot", "config.json")
+                    port = int(_j.load(open(p, encoding="utf-8")).get("port") or port)
+                except Exception:
+                    pass
+                r = _u.Request(f"http://127.0.0.1:{port}/panel/eylem?k=bagla", method="POST")
+                _u.urlopen(r, timeout=60).read()
+            except Exception:
+                pass
+            self._tunel_var = False
+            self.kok.after(0, lambda: self._adres_goster("", False))
+            self.kok.after(0, lambda: self.btn_bagla.config(
+                state="normal", text="🔗  Bağlantı adresi hazırla"))
+        threading.Thread(target=_, daemon=True).start()
+
+    def bagla_kopyala(self):
+        adres = self.adres.get().strip()
+        if not adres:
+            self.bagla_mesaj.config(text="Önce adresi hazırlayın.", fg=SOLUK)
+            return
+        try:
+            self.kok.clipboard_clear()
+            self.kok.clipboard_append(adres)
+            self.bagla_mesaj.config(text="📋 Kopyalandı. ChatGPT'ye yapıştırabilirsiniz.",
+                                    fg=YESIL)
+        except Exception as e:
+            self.bagla_mesaj.config(text=f"Kopyalanamadı: {e}", fg=KIRMIZI)
 
     def lisans_uygula(self):
         k = self.giris.get().strip()

@@ -61,7 +61,7 @@ KOPYALANACAK = [
     "input_bg.py", "goverlay.py", "belge.py",
     "GhostPilot.ico", "icon-256.png", "icon-128.png", "icon-48.png",
     "icon-32.png", "icon-16.png", "icon.png", "icon.svg", "favicon.ico",
-    "chatgpt-icon-256.png", "KURULUM_REHBERI.md", "SECURITY.md",
+    "chatgpt-icon-256.png", "KURULUM_REHBERI.md", "CHATGPT_EKLEME.md", "BAGLA.md", "SECURITY.md",
     "LICENSE", "COPYRIGHT", "README.md", "GIZLILIK.md", "KOSULLAR.md",
     "BASLA.bat", "PANEL.bat", "KURULUM.bat", "KALDIR.bat", "_bitis.bat",
     "basla.sh", "kurulum.sh", "GhostPilot.command",
