@@ -1,0 +1,45 @@
+{
+  "name": "ghostpilot",
+  "title": "GhostPilot",
+  "version": "5.19.0",
+  "description": "Your real computer, not a sandbox. 44 tools — files, terminal, screen, scheduling. No cloud, no telemetry.",
+  "developer": "BtmCode",
+  "author": {
+    "name": "BtmCode",
+    "fullName": "Ömer Zirve",
+    "email": "btmcode@outlook.com",
+    "url": "https://github.com/Btmcode"
+  },
+  "license": "MIT",
+  "homepage": "https://btmcode.vercel.app",
+  "websiteUrl": "https://btmcode.vercel.app",
+  "repositoryUrl": "https://github.com/Btmcode/Ghost-Pilot",
+  "supportUrl": "https://buymeacoffee.com/btmcode",
+  "donateUrl": "https://buymeacoffee.com/btmcode",
+  "privacyPolicyUrl": "https://github.com/Btmcode/Ghost-Pilot/blob/main/GIZLILIK.md",
+  "termsOfServiceUrl": "https://github.com/Btmcode/Ghost-Pilot/blob/main/KOSULLAR.md",
+  "server": {
+    "type": "streamable-http",
+    "urlTemplate": "https://<your-tunnel-address>/mcp?token=<your-token>",
+    "authentication": "none",
+    "note": "Token is embedded in the URL. Authentication field in ChatGPT must be set to None."
+  },
+  "links": {
+    "donate": "https://buymeacoffee.com/btmcode",
+    "github": "https://github.com/Btmcode/Ghost-Pilot",
+    "githubProfile": "https://github.com/Btmcode",
+    "website": "https://btmcode.vercel.app",
+    "blog": "https://mnemark.blogspot.com",
+    "privacy": "https://github.com/Btmcode/Ghost-Pilot/blob/main/GIZLILIK.md",
+    "terms": "https://github.com/Btmcode/Ghost-Pilot/blob/main/KOSULLAR.md",
+    "support": "https://buymeacoffee.com/btmcode",
+    "email": "btmcode@outlook.com"
+  },
+  "pricing": {
+    "free": "20.000 calls / month",
+    "pro": "10 USD / month (donation key)",
+    "payment": "donation only — no sales"
+  },
+  "categories": ["developer-tools", "productivity", "system"],
+  "keywords": ["desktop", "mcp", "files", "terminal", "screenshot", "automation"]
+}

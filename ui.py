@@ -69,6 +69,7 @@ _M = {
         "adim2": "2.  Gelişmiş → Geliştirici modunu açın",
         "adim3": "3.  Oluştur → adresi yapıştırın → Kimlik doğrulama: Yok",
         "adim4": "4.  Oluştur'a basın. Yeni sohbette + menüsünden GhostPilot'u seçin.",
+        "destek": "Destek",
         "gelismis": "Gelişmiş",
         "lisans": "Lisans",
         "cikis": "Çıkış",
@@ -92,6 +93,7 @@ _M = {
         "adim2": "2.  Advanced → turn on Developer mode",
         "adim3": "3.  Create → paste the address → Authentication: None",
         "adim4": "4.  Press Create. In a new chat pick GhostPilot from the + menu.",
+        "destek": "Support",
         "gelismis": "Advanced",
         "lisans": "Licence",
         "cikis": "Quit",
@@ -115,6 +117,7 @@ _M = {
         "adim2": "2.  Erweitert → Entwicklermodus einschalten",
         "adim3": "3.  Erstellen → Adresse einfügen → Authentifizierung: Keine",
         "adim4": "4.  Erstellen drücken. Im neuen Chat GhostPilot im + Menü wählen.",
+        "destek": "Unterstützen",
         "gelismis": "Erweitert",
         "lisans": "Lizenz",
         "cikis": "Beenden",
@@ -138,6 +141,7 @@ _M = {
         "adim2": "2.  Avanzado → active el modo desarrollador",
         "adim3": "3.  Crear → pegue la dirección → Autenticación: Ninguna",
         "adim4": "4.  Pulse Crear. En un chat nuevo elija GhostPilot en el menú +.",
+        "destek": "Apoyar",
         "gelismis": "Avanzado",
         "lisans": "Licencia",
         "cikis": "Salir",
@@ -306,6 +310,7 @@ class Panel:
         alt = tk.Frame(kok, bg=ARKA)
         alt.pack(side="bottom", fill="x", padx=26, pady=16)
         for yazi, fn in ((m("lisans"), self.lisans_penceresi),
+                         (m("destek"), self.destek_penceresi),
                          (m("gelismis"), self.gelismis_penceresi),
                          (m("cikis"), self.cikis_tam)):
             tk.Button(alt, text=yazi, command=fn, bg=ARKA, fg=SOLUK,
@@ -563,6 +568,66 @@ class Panel:
             webbrowser.open(url)
         except Exception:
             pass
+
+    # --------------------------------------------------------------- destek
+    def destek_penceresi(self):
+        p = tk.Toplevel(self.kok)
+        p.title("GhostPilot — " + m("destek"))
+        p.configure(bg=ARKA)
+        p.geometry("600x560")
+        tk.Label(p, text=m("destek"), bg=ARKA, fg=METIN,
+                 font=(F, 14, "bold")).pack(anchor="w", padx=24, pady=(22, 6))
+        tk.Label(p, text="GhostPilot ücretsiz ve açık kaynak (MIT). Satış yok — "
+                         "sürdürmenin tek yolu bağış.",
+                 bg=ARKA, fg=SOLUK, font=(F, 10), wraplength=540,
+                 justify="left", anchor="w").pack(anchor="w", padx=24)
+
+        tk.Button(p, text="☕  Bağış yap — Buy me a coffee", cursor="hand2",
+                  command=lambda: self._ac_url("https://buymeacoffee.com/btmcode"),
+                  bg="#ffdd00", fg="#0b1120", relief="flat", bd=0,
+                  font=(F, 11, "bold"), padx=20, pady=12).pack(anchor="w", padx=24,
+                                                               pady=(18, 0))
+        sat = tk.Frame(p, bg=ARKA)
+        sat.pack(fill="x", padx=24, pady=(10, 0))
+        for yazi, url in (("⭐ GitHub deposu", "https://github.com/Btmcode/Ghost-Pilot"),
+                          ("🌐 Web sitesi", "https://btmcode.vercel.app")):
+            tk.Button(sat, text=yazi, cursor="hand2",
+                      command=lambda u=url: self._ac_url(u),
+                      bg=CIZGI, fg=METIN, relief="flat", bd=0,
+                      font=(F, 9, "bold"), padx=14, pady=8).pack(side="left",
+                                                                 padx=(0, 8))
+
+        tk.Label(p, text="BAĞLANTILAR", bg=ARKA, fg=SILIK,
+                 font=(F, 8, "bold"), anchor="w").pack(fill="x", padx=24, pady=(22, 6))
+        linkler = [
+            ("Geliştirici", "BtmCode · Ömer Zirve", ""),
+            ("Web sitesi", "btmcode.vercel.app", "https://btmcode.vercel.app"),
+            ("Kaynak kodu", "github.com/Btmcode/Ghost-Pilot",
+             "https://github.com/Btmcode/Ghost-Pilot"),
+            ("GitHub profili", "github.com/Btmcode", "https://github.com/Btmcode"),
+            ("Bağış", "buymeacoffee.com/btmcode", "https://buymeacoffee.com/btmcode"),
+            ("Gizlilik", "Gizlilik politikası",
+             "https://github.com/Btmcode/Ghost-Pilot/blob/main/GIZLILIK.md"),
+            ("Koşullar", "Kullanım koşulları",
+             "https://github.com/Btmcode/Ghost-Pilot/blob/main/KOSULLAR.md"),
+            ("Blog", "mnemark.blogspot.com", "https://mnemark.blogspot.com"),
+            ("E-posta", "btmcode@outlook.com", "mailto:btmcode@outlook.com"),
+        ]
+        for etiket, deger, url in linkler:
+            r = tk.Frame(p, bg=ARKA)
+            r.pack(fill="x", padx=24, pady=1)
+            tk.Label(r, text=etiket, bg=ARKA, fg=SILIK, font=(F, 9),
+                     width=16, anchor="w").pack(side="left")
+            lb = tk.Label(r, text=deger, bg=ARKA,
+                          fg="#38bdf8" if url else METIN, font=(F, 9), anchor="w")
+            lb.pack(side="left")
+            if url:
+                lb.configure(cursor="hand2")
+                lb.bind("<Button-1>", lambda e, u=url: self._ac_url(u))
+
+        tk.Button(p, text="Kapat", command=p.destroy, bg=CIZGI, fg=METIN,
+                  relief="flat", bd=0, font=(F, 9), padx=18, pady=6).pack(side="bottom",
+                                                                         pady=16)
 
     # ------------------------------------------------------------- gelişmiş
     def gelismis_penceresi(self):

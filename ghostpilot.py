@@ -92,7 +92,7 @@ def lisans_iptal():
 # ============================================================================
 #  GhostPilot MCP v3.0.0 — tek dosya, sıfır bağımlılık
 #  Copyright (c) 2026 BTM Code — MIT License
-#  https://btmcode.vercel.app  ·  https://github.com/Btmcode/GhostPilot
+#  https://btmcode.vercel.app  ·  https://github.com/Btmcode/Ghost-Pilot
 #
 #  Bilgisayarınıza şu 3 şeyi verir:
 #    1) Köprü (bridge)  : stdio          → Claude Desktop / Cursor / VS Code
@@ -132,7 +132,7 @@ if sys.platform.startswith("win"):
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
-VERSION = "5.18.0"
+VERSION = "5.19.0"
 
 # Windows konsolu varsayılan olarak cp1254/cp1252 kullanır ve emoji yazınca
 # UnicodeEncodeError ile çöker. Hem kendimiz hem alt süreçler için UTF-8'e geç.
@@ -1507,6 +1507,16 @@ def _simge_svg_b64():
     return base64.b64encode(veri).decode()
 
 
+def _eklenti_kimlik():
+    """eklenti.json varsa oradan oku — tek kaynak. Yoksa gömülü değerler."""
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               "eklenti.json"), encoding="utf-8") as f:
+            return json.load(f) or {}
+    except Exception:
+        return {}
+
+
 def server_info(base=""):
     """MCP serverInfo — isim, sürüm ve SİMGE."""
     ikonlar = []
@@ -1520,12 +1530,32 @@ def server_info(base=""):
     if base:
         ikonlar.append({"src": base.rstrip("/") + "/icon.png",
                         "mimeType": "image/png", "sizes": ["256x256"]})
+    _e = _eklenti_kimlik()
     return {
         "name": "ghostpilot",
-        "title": "GhostPilot",
+        "title": _e.get("title") or "GhostPilot",
         "version": VERSION,
+        # ---- mağaza/eklenti kartında görünen alanlar
+        "description": _e.get("description") or (
+            "Your real computer, not a sandbox. 44 tools — files, "
+            "terminal, screen, scheduling. No cloud, no telemetry."),
+        "developer": _e.get("developer") or GELISTIRICI,
+        "author": {"name": GELISTIRICI, "email": GELISTIRICI_EPOSTA,
+                   "url": GITHUB_PROFIL},
         "icons": ikonlar,
-        "websiteUrl": "https://github.com/Btmcode/Ghost-Pilot",
+        "websiteUrl": SITE_URL,
+        "repositoryUrl": REPO_URL,
+        "homepage": SITE_URL,
+        "supportUrl": DESTEK_URL,
+        "donateUrl": DESTEK_URL,
+        "privacyPolicyUrl": GIZLILIK_URL,
+        "termsOfServiceUrl": KOSUL_URL,
+        "license": "MIT",
+        "_meta": {
+            "com.ghostpilot/developer": GELISTIRICI_TAM,
+            "com.ghostpilot/donate": DESTEK_URL,
+            "com.ghostpilot/source": REPO_URL,
+        },
     }
 
 
@@ -2238,7 +2268,14 @@ ONAY_HTML = """<!doctype html><html lang="tr"><head><meta charset="utf-8">
  .istemci b{color:#e2e8f0}
  ul{margin:0 0 20px;padding-left:18px;font-size:13px;color:#b8c6dc}
  li{margin:3px 0}
- .uyari{background:#2a1c0d;border:1px solid #5b3d10;border-radius:10px;
+ .btn-destek{display:inline-block;background:#ffdd00;color:#0b1120;
+ font-weight:700;padding:12px 18px;border-radius:11px;text-decoration:none;
+ font-size:14px;margin:0 8px 8px 0}
+.btn-gh{display:inline-block;background:#1e2d4a;color:#c9d5e8;font-weight:600;
+ padding:12px 16px;border-radius:11px;text-decoration:none;font-size:14px;margin:0 8px 8px 0}
+.btn-anahtar{display:inline-block;background:#22c55e;color:#06240f;font-weight:700;
+ padding:12px 16px;border-radius:11px;text-decoration:none;font-size:14px;margin:0 8px 8px 0}
+.uyari{background:#2a1c0d;border:1px solid #5b3d10;border-radius:10px;
    padding:10px 12px;font-size:12.5px;color:#f0c07a;margin-bottom:20px}
  .dug{margin-top:8px}
  button{width:100%;padding:13px;border-radius:11px;border:0;font-size:15px;
@@ -2292,7 +2329,7 @@ def oauth_metadata(base, include_auth_methods=False):
         "client_registration_approaches_supported": [
             "dynamic_client_registration",
         ],
-        "service_documentation": "https://github.com/Btmcode/GhostPilot",
+        "service_documentation": "https://github.com/Btmcode/Ghost-Pilot",
     }
     if include_auth_methods:
         d["token_endpoint_auth_methods_supported"] = ["none",
@@ -2422,10 +2459,19 @@ def onay_listesi():
 #  GhostPilot ücretsiz ve açık kaynak (MIT). İsteyen bağış yapabilir.
 # ============================================================================
 
-DESTEK_URL = "https://buymeacoffee.com/btmcode"
+# --- geliştirici kimliği (mağaza/eklenti kartlarında görünen bilgi) ---
+GELISTIRICI = "BtmCode"
+GELISTIRICI_TAM = "Ömer Zirve"
+GELISTIRICI_EPOSTA = "btmcode@outlook.com"
+
+DESTEK_URL = "https://buymeacoffee.com/btmcode"      # donate / bağış
 SITE_URL = "https://btmcode.vercel.app"
 BLOG_URL = "https://mnemark.blogspot.com"
-REPO_URL = "https://github.com/Btmcode/GhostPilot"
+REPO_URL = "https://github.com/Btmcode/Ghost-Pilot"
+GITHUB_PROFIL = "https://github.com/Btmcode"
+KOSUL_URL = "https://github.com/Btmcode/Ghost-Pilot/blob/main/KOSULLAR.md"
+GIZLILIK_URL = "https://github.com/Btmcode/Ghost-Pilot/blob/main/GIZLILIK.md"
+DESTEK_ANAHTAR_URL = "https://buymeacoffee.com/btmcode"   # destek anahtarı isteği
 
 
 def _islem_sayaci():
@@ -2475,32 +2521,42 @@ def _paket_html():
         return ""
 
 
-PANEL_DESTEK = """<div class="bolum">
-  <h2>Destek · bağış</h2>
-  <p class="alt" style="margin:0 0 10px">
-    GhostPilot <b>ücretsiz, açık kaynak (MIT)</b> ve kotasız çalışır.
-    İşinize yaradıysa bir kahve ısmarlayabilirsiniz — zorunlu değil.
+PANEL_DESTEK = """<div class="bolum" id="destekBolum">
+  <h2>Destek · bağış · bağlantılar</h2>
+  <p class="alt" style="margin:0 0 12px">
+    GhostPilot <b>ücretsiz, açık kaynak (MIT)</b>. Satış yok — sürdürmek için
+    tek yol bağış. İşinize yaradıysa bir kahve ısmarlayabilirsiniz.
   </p>
-  <a href="%s" target="_blank" rel="noopener"
-     style="display:inline-block;background:#ffdd00;color:#0b1120;font-weight:700;
-            padding:11px 18px;border-radius:11px;text-decoration:none;font-size:14px">
-    ☕ Buy me a coffee
+  <a href="%s" target="_blank" rel="noopener" class="btn-destek">
+    ☕ Bağış yap (Buy me a coffee)
   </a>
-  <a href="%s" target="_blank" rel="noopener"
-     style="display:inline-block;margin-left:8px;background:#1e2d4a;color:#c9d5e8;
-            font-weight:600;padding:11px 16px;border-radius:11px;text-decoration:none;font-size:14px">
-    ⭐ GitHub
+  <a href="%s" target="_blank" rel="noopener" class="btn-gh">
+    ⭐ GitHub deposu
   </a>
-  <a href="%s" target="_blank" rel="noopener"
-     style="display:inline-block;margin-left:8px;background:#22c55e;color:#06240f;
-            font-weight:700;padding:11px 16px;border-radius:11px;text-decoration:none;font-size:14px">
+  <a href="%s" target="_blank" rel="noopener" class="btn-anahtar">
     🔑 Destek anahtarı iste
   </a>
-  <p class="alt" style="margin:12px 0 0;font-size:12px">
-    Site: <a href="%s" target="_blank" style="color:#8b9bb4">btmcode.vercel.app</a> ·
-    Günlük notlar: <a href="%s" target="_blank" style="color:#8b9bb4">mnemark.blogspot.com</a>
-  </p>
-</div>""" % (DESTEK_URL, REPO_URL, SITE_URL, BLOG_URL, DESTEK_URL)
+
+  <table style="margin-top:16px">
+    <tr><th style="width:170px">Geliştirici</th><td><b>%s</b> · %s</td></tr>
+    <tr><th>Web sitesi</th><td><a href="%s" target="_blank">%s</a></td></tr>
+    <tr><th>Kaynak kodu</th><td><a href="%s" target="_blank">%s</a></td></tr>
+    <tr><th>GitHub profili</th><td><a href="%s" target="_blank">%s</a></td></tr>
+    <tr><th>Bağış</th><td><a href="%s" target="_blank">%s</a></td></tr>
+    <tr><th>Gizlilik</th><td><a href="%s" target="_blank">Gizlilik politikası</a></td></tr>
+    <tr><th>Koşullar</th><td><a href="%s" target="_blank">Kullanım koşulları</a></td></tr>
+    <tr><th>Blog</th><td><a href="%s" target="_blank">%s</a></td></tr>
+    <tr><th>İletişim</th><td><a href="mailto:%s">%s</a></td></tr>
+  </table>
+</div>""" % (DESTEK_URL, REPO_URL, DESTEK_ANAHTAR_URL,
+             GELISTIRICI_TAM, GELISTIRICI,
+             SITE_URL, SITE_URL.replace("https://", ""),
+             REPO_URL, REPO_URL.replace("https://", ""),
+             GITHUB_PROFIL, GITHUB_PROFIL.replace("https://", ""),
+             DESTEK_URL, DESTEK_URL.replace("https://", ""),
+             GIZLILIK_URL, KOSUL_URL,
+             BLOG_URL, BLOG_URL.replace("https://", ""),
+             GELISTIRICI_EPOSTA, GELISTIRICI_EPOSTA)
 
 
 # ============================================================================
@@ -2961,7 +3017,7 @@ class RelayHandler(BaseHTTPRequestHandler):
                 continue
         if not govde:
             govde = ("# GhostPilot\n\n"
-                     "Ayrıntılar: https://github.com/Btmcode/GhostPilot\n\n"
+                     "Ayrıntılar: https://github.com/Btmcode/Ghost-Pilot\n\n"
                      "GhostPilot verilerinizi toplamaz; her şey kendi "
                      "bilgisayarınızda kalır.")
         # markdown → basit HTML (başlık, paragraf, liste, kalın, kod)
@@ -4117,7 +4173,7 @@ def print_help():
   python ghostpilot.py where      Yapılandırma dosyalarının yerini göster
 
   Kurulum dosyaları: {CFG_DIR}
-  Belgeler: https://github.com/Btmcode/GhostPilot
+  Belgeler: https://github.com/Btmcode/Ghost-Pilot
 """)
 
 

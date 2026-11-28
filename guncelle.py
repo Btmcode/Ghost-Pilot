@@ -15,7 +15,7 @@ import shutil
 import sys
 import zipfile
 
-REPO = "Btmcode/GhostPilot"
+REPO = "Btmcode/Ghost-Pilot"
 API = f"https://api.github.com/repos/{REPO}/releases/latest"
 
 

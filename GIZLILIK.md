@@ -74,12 +74,12 @@ GhostPilot genel kullanım içindir; 13 yaş altı çocuklardan bilerek veri top
 ## 7. Değişiklikler
 
 Bu politika güncellenirse değişiklik tarihi yukarıda güncellenir ve depoda
-(`github.com/Btmcode/GhostPilot`) yayımlanır.
+(`github.com/Btmcode/Ghost-Pilot`) yayımlanır.
 
 ## 8. İletişim
 
 Sorularınız için GitHub üzerinden konu açın:
-[github.com/Btmcode/GhostPilot/issues](https://github.com/Btmcode/GhostPilot/issues)
+[github.com/Btmcode/Ghost-Pilot/issues](https://github.com/Btmcode/Ghost-Pilot/issues)
 
 ---
 

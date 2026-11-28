@@ -45,7 +45,7 @@ BTM Code bu hizmetlerin davranışından sorumlu değildir.
 
 Yazılım "olduğu gibi" sunulur; kesintisiz çalışacağı veya hataların düzeltileceği
 taahhüt edilmez. Destek gönüllülük esasına dayanır
-([GitHub Issues](https://github.com/Btmcode/GhostPilot/issues)).
+([GitHub Issues](https://github.com/Btmcode/Ghost-Pilot/issues)).
 
 ## 7. Bağışlar
 
@@ -60,7 +60,7 @@ mahkemeleri yetkilidir.
 
 ## 9. İletişim
 
-[github.com/Btmcode/GhostPilot](https://github.com/Btmcode/GhostPilot) ·
+[github.com/Btmcode/Ghost-Pilot](https://github.com/Btmcode/Ghost-Pilot) ·
 [btmcode.vercel.app](https://btmcode.vercel.app)
 
 ---

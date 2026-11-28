@@ -113,7 +113,7 @@ def kaydet(sessiz=False):
                 ("UninstallString", f'"{py}" "{kaldirici}" --sessiz'),
                 ("QuietUninstallString", f'"{py}" "{kaldirici}" --sessiz --tum'),
                 ("URLInfoAbout", "https://btmcode.vercel.app"),
-                ("HelpLink", "https://github.com/Btmcode/GhostPilot"),
+                ("HelpLink", "https://github.com/Btmcode/Ghost-Pilot"),
                 ("NoModify", 1),
                 ("NoRepair", 1),
             ]:
